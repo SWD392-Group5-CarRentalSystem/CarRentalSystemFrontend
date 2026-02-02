@@ -1,0 +1,33 @@
+export const APP_NAME = 'Car Rental System';
+
+export const ROLES = {
+  ADMIN: 'ADMIN',
+  USER: 'USER',
+  OWNER: 'OWNER',
+};
+
+export const BOOKING_STATUS = {
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  CANCELLED: 'CANCELLED',
+  COMPLETED: 'COMPLETED',
+};
+
+export const CAR_STATUS = {
+  AVAILABLE: 'AVAILABLE',
+  RENTED: 'RENTED',
+  MAINTENANCE: 'MAINTENANCE',
+};
+
+export const PAYMENT_STATUS = {
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+  FAILED: 'FAILED',
+  REFUNDED: 'REFUNDED',
+};
+
+export const DATE_FORMAT = {
+  DISPLAY: 'DD/MM/YYYY',
+  API: 'YYYY-MM-DD',
+  DATETIME: 'DD/MM/YYYY HH:mm',
+};
