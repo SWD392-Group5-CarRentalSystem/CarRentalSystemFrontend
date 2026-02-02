@@ -196,20 +196,22 @@ const Home = () => {
             </Link>
 
             {/* Navigation */}
-            <nav className="hidden md:flex items-center gap-2">
+            <nav className="hidden md:flex items-center gap-3">
               <Link
                 to="/booking"
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-600 hover:text-sky-600 hover:bg-sky-50 transition-all duration-200"
+                className="group relative flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold text-gray-700 hover:text-white overflow-hidden transition-all duration-300"
               >
-                <MdCalendarToday className="text-lg" />
-                Đặt xe
+                <span className="absolute inset-0 bg-gradient-to-r from-sky-400 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                <MdCalendarToday className="text-lg relative z-10" />
+                <span className="relative z-10">Đặt xe</span>
               </Link>
               <Link
                 to="/history"
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-600 hover:text-sky-600 hover:bg-sky-50 transition-all duration-200"
+                className="group relative flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold text-gray-700 hover:text-white overflow-hidden transition-all duration-300"
               >
-                <MdHistory className="text-lg" />
-                Lịch sử
+                <span className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                <MdHistory className="text-lg relative z-10" />
+                <span className="relative z-10">Lịch sử</span>
               </Link>
             </nav>
 
@@ -594,7 +596,7 @@ const Home = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-100 py-16 w-full">
+      <footer className="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 py-16 w-full">
         <div className="w-full px-6 lg:px-12 xl:px-20">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-12">
             {/* Brand */}
@@ -603,30 +605,30 @@ const Home = () => {
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white shadow-lg shadow-sky-400/40">
                   <MdElectricCar className="text-[22px]" />
                 </div>
-                <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent">
+                <span className="font-bold text-xl tracking-tight text-white">
                   EV Rental System
                 </span>
               </Link>
-              <p className="text-gray-500 text-sm leading-relaxed mb-6">
+              <p className="text-gray-400 text-sm leading-relaxed mb-6">
                 Hệ thống cho thuê xe điện cao cấp. Cùng chúng tôi xây dựng một
                 thế giới xanh hơn.
               </p>
               <div className="flex gap-4">
                 <a
                   href="#"
-                  className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+                  className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-sky-500 hover:scale-110 transition-all duration-300"
                 >
                   <span className="text-sm">𝕏</span>
                 </a>
                 <a
                   href="#"
-                  className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+                  className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-sky-500 hover:scale-110 transition-all duration-300"
                 >
                   <span className="text-sm">in</span>
                 </a>
                 <a
                   href="#"
-                  className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+                  className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-sky-500 hover:scale-110 transition-all duration-300"
                 >
                   <span className="text-sm">📷</span>
                 </a>
@@ -635,81 +637,81 @@ const Home = () => {
 
             {/* Links */}
             <div>
-              <h4 className="font-bold text-xs uppercase tracking-widest text-gray-400 mb-4">
+              <h4 className="font-bold text-xs uppercase tracking-widest text-sky-400 mb-4">
                 Trải Nghiệm
               </h4>
-              <ul className="space-y-3 text-sm text-gray-600">
+              <ul className="space-y-3 text-sm text-gray-300">
                 <li>
-                  <a href="#" className="hover:text-gray-900 transition-colors">
+                  <a href="#" className="hover:text-sky-400 transition-colors">
                     Tự Lái Du Lịch
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gray-900 transition-colors">
+                  <a href="#" className="hover:text-sky-400 transition-colors">
                     Dịch Vụ Tài Xế
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gray-900 transition-colors">
+                  <a href="#" className="hover:text-sky-400 transition-colors">
                     Đội Xe Doanh Nghiệp
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gray-900 transition-colors">
+                  <a href="#" className="hover:text-sky-400 transition-colors">
                     Thành Viên VIP
                   </a>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-xs uppercase tracking-widest text-gray-400 mb-4">
+              <h4 className="font-bold text-xs uppercase tracking-widest text-sky-400 mb-4">
                 Tài Nguyên
               </h4>
-              <ul className="space-y-3 text-sm text-gray-600">
+              <ul className="space-y-3 text-sm text-gray-300">
                 <li>
-                  <a href="#" className="hover:text-gray-900 transition-colors">
+                  <a href="#" className="hover:text-sky-400 transition-colors">
                     Triết Lý Của Chúng Tôi
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gray-900 transition-colors">
+                  <a href="#" className="hover:text-sky-400 transition-colors">
                     Báo Cáo Môi Trường
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gray-900 transition-colors">
+                  <a href="#" className="hover:text-sky-400 transition-colors">
                     Mạng Lưới Sạc
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gray-900 transition-colors">
+                  <a href="#" className="hover:text-sky-400 transition-colors">
                     Tin Tức Báo Chí
                   </a>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-xs uppercase tracking-widest text-gray-400 mb-4">
+              <h4 className="font-bold text-xs uppercase tracking-widest text-sky-400 mb-4">
                 Hỗ Trợ
               </h4>
-              <ul className="space-y-3 text-sm text-gray-600">
+              <ul className="space-y-3 text-sm text-gray-300">
                 <li>
-                  <a href="#" className="hover:text-gray-900 transition-colors">
+                  <a href="#" className="hover:text-sky-400 transition-colors">
                     Tư Vấn 24/7
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gray-900 transition-colors">
+                  <a href="#" className="hover:text-sky-400 transition-colors">
                     Điều Khoản Thuê Xe
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gray-900 transition-colors">
+                  <a href="#" className="hover:text-sky-400 transition-colors">
                     Chính Sách Bảo Mật
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gray-900 transition-colors">
+                  <a href="#" className="hover:text-sky-400 transition-colors">
                     Trung Tâm Liên Hệ
                   </a>
                 </li>
@@ -718,18 +720,18 @@ const Home = () => {
           </div>
 
           {/* Bottom Bar */}
-          <div className="mt-12 pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-400 text-xs">
               © 2026 EV Rental System · Hệ Thống Hoạt Động Ổn Định
             </p>
             <div className="flex gap-6 text-xs text-gray-400">
-              <a href="#" className="hover:text-gray-600 transition-colors">
+              <a href="#" className="hover:text-sky-400 transition-colors">
                 Điều khoản
               </a>
-              <a href="#" className="hover:text-gray-600 transition-colors">
+              <a href="#" className="hover:text-sky-400 transition-colors">
                 Chính sách
               </a>
-              <a href="#" className="hover:text-gray-600 transition-colors">
+              <a href="#" className="hover:text-sky-400 transition-colors">
                 Liên hệ
               </a>
             </div>
