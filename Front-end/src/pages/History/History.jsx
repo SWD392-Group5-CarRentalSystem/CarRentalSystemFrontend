@@ -19,7 +19,9 @@ const History = () => {
               <MdHistory className="text-3xl text-emerald-500" />
             </div>
             <div>
-              <h1 className="text-3xl font-black text-gray-900">Lịch Sử Thuê Xe</h1>
+              <h1 className="text-3xl font-black text-gray-900">
+                Lịch Sử Thuê Xe
+              </h1>
               <p className="text-gray-500">Xem lại các chuyến đi của bạn</p>
             </div>
           </div>
@@ -32,7 +34,8 @@ const History = () => {
               Chưa có lịch sử thuê xe
             </h2>
             <p className="text-gray-500 max-w-md mx-auto">
-              Bạn chưa có chuyến đi nào. Hãy bắt đầu khám phá đội xe của chúng tôi!
+              Bạn chưa có chuyến đi nào. Hãy bắt đầu khám phá đội xe của chúng
+              tôi!
             </p>
             <Link
               to="/cars"

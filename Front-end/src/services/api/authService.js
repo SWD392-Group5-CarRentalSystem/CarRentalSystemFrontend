@@ -1,15 +1,15 @@
-import axiosInstance from './axiosConfig';
+import axiosInstance from "./axiosConfig";
 
 export const authService = {
   // Login
   login: async (credentials) => {
     try {
-      const response = await axiosInstance.post('/auth/login', credentials);
+      const response = await axiosInstance.post("/auth/login", credentials);
       if (response.token) {
-        localStorage.setItem('token', response.token);
+        localStorage.setItem("token", response.token);
       }
       if (response.user) {
-        localStorage.setItem('user', JSON.stringify(response.user));
+        localStorage.setItem("user", JSON.stringify(response.user));
       }
       return response;
     } catch (error) {
@@ -20,7 +20,7 @@ export const authService = {
   // Register
   register: async (userData) => {
     try {
-      const response = await axiosInstance.post('/auth/register', userData);
+      const response = await axiosInstance.post("/auth/register", userData);
       return response;
     } catch (error) {
       throw error.response?.data || error;
@@ -29,23 +29,23 @@ export const authService = {
 
   // Logout
   logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
   },
 
   // Get current user
   getCurrentUser: () => {
-    const userStr = localStorage.getItem('user');
+    const userStr = localStorage.getItem("user");
     return userStr ? JSON.parse(userStr) : null;
   },
 
   // Check if user is authenticated
   isAuthenticated: () => {
-    return !!localStorage.getItem('token');
+    return !!localStorage.getItem("token");
   },
 
   // Refresh token
   refreshToken: async () => {
-    return await axiosInstance.post('/auth/refresh-token');
+    return await axiosInstance.post("/auth/refresh-token");
   },
 };

@@ -471,7 +471,8 @@ const Home = () => {
                 Đội Xe Cao Cấp
               </h2>
               <p className="text-gray-500 text-base lg:text-lg">
-                Xe điện hiệu suất cao, tuyển chọn dành cho khách hàng thượng lưu.
+                Xe điện hiệu suất cao, tuyển chọn dành cho khách hàng thượng
+                lưu.
               </p>
             </div>
             {/* Filter Tabs */}
@@ -522,7 +523,8 @@ const Home = () => {
               Dịch Vụ Cao Cấp
             </h2>
             <p className="text-gray-500 max-w-xl mx-auto text-base">
-              Chúng tôi tối ưu hóa mọi quy trình để bạn tập trung vào hành trình.
+              Chúng tôi tối ưu hóa mọi quy trình để bạn tập trung vào hành
+              trình.
             </p>
           </div>
 
@@ -572,7 +574,8 @@ const Home = () => {
                 Đang Chờ Bạn.
               </h2>
               <p className="text-white/60 mb-10 max-w-xl mx-auto text-base lg:text-lg font-light">
-                Tham gia cộng đồng xe điện cao cấp và tận hưởng trải nghiệm di chuyển mới.
+                Tham gia cộng đồng xe điện cao cấp và tận hưởng trải nghiệm di
+                chuyển mới.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link

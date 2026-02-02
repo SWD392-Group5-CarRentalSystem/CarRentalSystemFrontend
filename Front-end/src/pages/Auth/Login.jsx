@@ -56,7 +56,7 @@ const Login = () => {
     try {
       const response = await authService.login(formData);
       console.log("Login success:", response);
-      
+
       // Redirect to home or dashboard after successful login
       navigate("/");
     } catch (err) {
@@ -92,7 +92,11 @@ const Login = () => {
 
             {/* Floating Feature Cards (Glassmorphism) */}
             <div className="grid grid-cols-3 gap-4">
-              <FeatureCard icon={MdSmartToy} label="Hỗ Trợ AI" value="Thông Minh" />
+              <FeatureCard
+                icon={MdSmartToy}
+                label="Hỗ Trợ AI"
+                value="Thông Minh"
+              />
               <FeatureCard
                 icon={MdCalendarMonth}
                 label="Đặt Xe"

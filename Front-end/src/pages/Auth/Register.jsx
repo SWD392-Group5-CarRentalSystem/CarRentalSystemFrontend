@@ -79,10 +79,10 @@ const Register = () => {
       // Gửi dữ liệu khớp với BE schema (không gửi confirmPassword)
       const { confirmPassword, ...registerData } = formData;
       const response = await authService.register(registerData);
-      
+
       console.log("Register success:", response);
       setSuccess("Đăng ký thành công! Đang chuyển đến trang đăng nhập...");
-      
+
       // Redirect to login page after 2 seconds
       setTimeout(() => {
         navigate("/login");
@@ -209,7 +209,13 @@ const Register = () => {
                     onChange={handleInputChange}
                     className="w-full h-14 rounded-xl border border-gray-200 bg-gray-50 pl-6 pr-14 pb-1 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#13A4EC] focus:bg-white focus:ring-2 focus:ring-[#13A4EC]/20 outline-none transition-all duration-200"
                     required
-                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
+                    max={
+                      new Date(
+                        new Date().setFullYear(new Date().getFullYear() - 18),
+                      )
+                        .toISOString()
+                        .split("T")[0]
+                    }
                   />
                   <MdCalendarToday className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xl" />
                 </div>
