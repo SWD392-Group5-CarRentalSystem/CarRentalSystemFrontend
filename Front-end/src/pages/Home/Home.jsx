@@ -596,7 +596,7 @@ const Home = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 py-16 w-full">
+      <footer className="bg-[#101929] py-16 w-full">
         <div className="w-full px-6 lg:px-12 xl:px-20">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-12">
             {/* Brand */}
