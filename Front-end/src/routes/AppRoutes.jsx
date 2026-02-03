@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { MainLayout } from "../components/layout";
+import { MainLayout, ManagerLayout } from "../components/layout";
 import Home from "../pages/Home";
 import { Login, Register } from "../pages/Auth";
 import { Booking } from "../pages/Booking";
 import { History } from "../pages/History";
+import { Dashboard, Cars, Bookings, Drivers } from "../pages/Manager";
 
 // Lazy load pages for better performance
 // import { lazy, Suspense } from 'react';
@@ -21,6 +22,15 @@ const AppRoutes = () => {
           {/* <Route path="/cars" element={<Cars />} /> */}
           {/* <Route path="/profile" element={<Profile />} /> */}
         </Route>
+        
+        {/* Manager Routes */}
+        <Route path="/manager" element={<ManagerLayout />}>
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="cars" element={<Cars />} />
+          <Route path="bookings" element={<Bookings />} />
+          <Route path="drivers" element={<Drivers />} />
+        </Route>
+        
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Routes>

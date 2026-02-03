@@ -100,19 +100,19 @@ const Register = () => {
       <div className="flex h-full w-full">
         {/* Left Pane: Register Form */}
         <div className="flex-1 lg:w-2/5 flex items-center justify-center bg-white h-full p-8 sm:p-12 lg:p-16 overflow-y-auto">
-          <div className="w-full max-w-[480px] flex flex-col gap-6">
+          <div className="w-full max-w-120 flex flex-col gap-6">
             {/* Header */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2.5 mb-2">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white shadow-lg shadow-sky-400/40">
+                <div className="w-9 h-9 rounded-lg bg-linear-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white shadow-lg shadow-sky-400/40">
                   <MdElectricCar className="text-[22px]" />
                 </div>
-                <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent">
+                <span className="font-bold text-xl tracking-tight bg-linear-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent">
                   EV Rental System
                 </span>
               </div>
               <h1 className="text-4xl font-extrabold leading-tight">
-                <span className="bg-gradient-to-r from-sky-400 via-blue-500 to-sky-600 bg-clip-text text-transparent drop-shadow-sm">
+                <span className="bg-linear-to-r from-sky-400 via-blue-500 to-sky-600 bg-clip-text text-transparent drop-shadow-sm">
                   Tạo Tài Khoản
                 </span>
               </h1>
@@ -302,11 +302,11 @@ const Register = () => {
 
             {/* Divider */}
             <div className="relative flex py-2 items-center">
-              <div className="flex-grow border-t border-gray-200"></div>
-              <span className="flex-shrink mx-4 text-gray-400 text-sm font-medium">
+              <div className="grow border-t border-gray-200"></div>
+              <span className="shrink mx-4 text-gray-400 text-sm font-medium">
                 Hoặc đăng ký với
               </span>
-              <div className="flex-grow border-t border-gray-200"></div>
+              <div className="grow border-t border-gray-200"></div>
             </div>
 
             {/* Social Login */}
@@ -348,7 +348,7 @@ const Register = () => {
           style={{ backgroundImage: `url(${registerBackground})` }}
         >
           {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/40 to-transparent mix-blend-multiply pointer-events-none"></div>
+          <div className="absolute inset-0 bg-linear-to-t from-primary/40 to-transparent mix-blend-multiply pointer-events-none"></div>
           <div className="absolute inset-0 bg-black/10 pointer-events-none"></div>
 
           {/* Content Container */}
