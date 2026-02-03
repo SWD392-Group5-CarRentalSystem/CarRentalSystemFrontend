@@ -1,9 +1,9 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { MainLayout } from "../components/layout";
-import Home from "../pages/Home";
+import Home from "../pages/Home/Home";
 import { Login, Register } from "../pages/Auth";
-import { Booking } from "../pages/Booking";
-import { History } from "../pages/History";
+import Booking from "../pages/Booking/Booking";
+import History from "../pages/History/History";
 
 // Lazy load pages for better performance
 // import { lazy, Suspense } from 'react';
@@ -15,8 +15,8 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Home />} />
-          <Route path="/booking" element={<Booking />} />
-          <Route path="/history" element={<History />} />
+          <Route path="booking" element={<Booking />} />
+          <Route path="history" element={<History />} />
           {/* Add more routes here */}
           {/* <Route path="/cars" element={<Cars />} /> */}
           {/* <Route path="/profile" element={<Profile />} /> */}

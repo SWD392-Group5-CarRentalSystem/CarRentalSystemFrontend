@@ -12,7 +12,6 @@ import {
   MdSmartToy,
   MdCalendarMonth,
   MdVerifiedUser,
-  MdCalendarToday,
 } from "react-icons/md";
 import { authService } from "../../services/api/authService";
 
@@ -207,7 +206,7 @@ const Register = () => {
                     name="DOB"
                     value={formData.DOB}
                     onChange={handleInputChange}
-                    className="w-full h-14 rounded-xl border border-gray-200 bg-gray-50 pl-6 pr-14 pb-1 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#13A4EC] focus:bg-white focus:ring-2 focus:ring-[#13A4EC]/20 outline-none transition-all duration-200"
+                    className="w-full h-14 rounded-xl border border-gray-200 bg-gray-50 pl-6 pr-4 pb-1 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#13A4EC] focus:bg-white focus:ring-2 focus:ring-[#13A4EC]/20 outline-none transition-all duration-200"
                     required
                     max={
                       new Date(
@@ -217,7 +216,6 @@ const Register = () => {
                         .split("T")[0]
                     }
                   />
-                  <MdCalendarToday className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xl" />
                 </div>
               </div>
 

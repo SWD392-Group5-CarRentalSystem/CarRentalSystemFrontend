@@ -11,7 +11,7 @@ import {
   MdCalendarMonth,
   MdVerifiedUser,
 } from "react-icons/md";
-import { useAuthContext } from "../../context";
+import { useAuthContext, ROLES } from "../../context";
 
 import loginBackground from "../../assets/images/login.png";
 
@@ -59,8 +59,24 @@ const Login = () => {
 
       if (result.success) {
         console.log("Login success");
-        // Redirect to home after successful login
-        navigate("/");
+        // Redirect theo role sau khi đăng nhập thành công
+        const userRole = result.user?.role;
+        
+        switch (userRole) {
+          case ROLES.MANAGER:
+            navigate("/admin/dashboard");
+            break;
+          case ROLES.STAFF:
+            navigate("/staff/dashboard");
+            break;
+          case ROLES.DRIVER:
+            navigate("/driver/dashboard");
+            break;
+          case ROLES.CUSTOMER:
+          default:
+            navigate("/");
+            break;
+        }
       } else {
         setError(result.error || "Email hoặc mật khẩu không đúng");
       }
