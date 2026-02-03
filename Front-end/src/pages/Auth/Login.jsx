@@ -11,7 +11,7 @@ import {
   MdCalendarMonth,
   MdVerifiedUser,
 } from "react-icons/md";
-import { authService } from "../../services/api/authService";
+import { useAuthContext } from "../../context";
 
 import loginBackground from "../../assets/images/login.png";
 
@@ -32,6 +32,7 @@ const FeatureCard = ({ icon: Icon, label, value }) => (
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuthContext();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -54,14 +55,18 @@ const Login = () => {
     setError("");
 
     try {
-      const response = await authService.login(formData);
-      console.log("Login success:", response);
+      const result = await login(formData);
 
-      // Redirect to home or dashboard after successful login
-      navigate("/");
+      if (result.success) {
+        console.log("Login success");
+        // Redirect to home after successful login
+        navigate("/");
+      } else {
+        setError(result.error || "Email hoặc mật khẩu không đúng");
+      }
     } catch (err) {
       console.error("Login error:", err);
-      setError(err.message || "Email hoặc mật khẩu không đúng");
+      setError("Email hoặc mật khẩu không đúng");
     } finally {
       setIsLoading(false);
     }

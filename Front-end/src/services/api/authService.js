@@ -1,4 +1,5 @@
 import axiosInstance from "./axiosConfig";
+import { jwtDecode } from "jwt-decode";
 
 export const authService = {
   // Login
@@ -7,9 +8,22 @@ export const authService = {
       const response = await axiosInstance.post("/auth/login", credentials);
       if (response.token) {
         localStorage.setItem("token", response.token);
-      }
-      if (response.user) {
-        localStorage.setItem("user", JSON.stringify(response.user));
+
+        // Decode token to get user info
+        try {
+          const decoded = jwtDecode(response.token);
+          const user = {
+            _id: decoded.userId,
+            username: decoded.username,
+            email: decoded.email || "",
+            phoneNumber: decoded.phoneNumber || "",
+            role: decoded.role || "customer",
+          };
+          localStorage.setItem("user", JSON.stringify(user));
+          response.user = user; // Add user to response for AuthContext
+        } catch (decodeError) {
+          console.error("Error decoding token:", decodeError);
+        }
       }
       return response;
     } catch (error) {

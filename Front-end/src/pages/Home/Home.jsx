@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
 import { useAuthContext } from "../../context";
@@ -99,40 +99,78 @@ const carsData = [
 
 const filterTabs = ["Tất cả", "Sedan", "SUV", "Thể thao", "Hạng sang"];
 
-// Car Card Component
-const CarCard = ({ car }) => (
-  <div className="car-card-hover group cursor-pointer">
-    <div className="relative rounded-2xl overflow-hidden bg-gray-100 aspect-[4/3] mb-4">
-      <img
-        alt={car.name}
-        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-        src={car.image}
-      />
-      {/* Badge */}
-      {car.badge && (
-        <div className="absolute top-3 left-3">
-          <span
-            className={`${car.badgeColor} text-white text-[9px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider`}
-          >
-            {car.badge}
+// Car Card Component with stagger animations
+const CarCard = ({ car, index }) => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div
+      className={`car-card-hover group cursor-pointer transform transition-all duration-700 ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"
+      }`}
+      style={{ transitionDelay: `${index * 80}ms` }}
+    >
+      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 aspect-[4/3] mb-4 shadow-lg group-hover:shadow-2xl transition-shadow duration-500">
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-sky-500/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"></div>
+
+        <img
+          alt={car.name}
+          className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1"
+          src={car.image}
+        />
+
+        {/* Badge */}
+        {car.badge && (
+          <div className="absolute top-3 left-3 z-20">
+            <span
+              className={`${car.badgeColor} text-white text-[9px] font-bold px-2.5 py-1.5 rounded-lg uppercase tracking-wider shadow-lg animate-pulse`}
+            >
+              {car.badge}
+            </span>
+          </div>
+        )}
+
+        {/* Electric icon badge */}
+        <div className="absolute bottom-3 right-3 z-20 bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg transform group-hover:scale-110 transition-transform duration-300">
+          <MdElectricCar className="text-emerald-500 text-lg" />
+        </div>
+
+        {/* Quick view button on hover */}
+        <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+          <button className="px-6 py-3 bg-white/95 backdrop-blur-sm text-gray-900 font-bold rounded-full shadow-xl transform scale-90 group-hover:scale-100 transition-transform duration-300 hover:bg-sky-500 hover:text-white">
+            Xem chi tiết
+          </button>
+        </div>
+      </div>
+
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <h3 className="font-bold text-base text-gray-900 group-hover:text-sky-600 transition-colors duration-300">
+            {car.name}
+          </h3>
+          <p className="text-gray-500 text-xs mt-1 flex items-center gap-1">
+            <MdEvStation className="text-emerald-500 text-sm" />
+            {car.description}
+          </p>
+        </div>
+        <div className="text-right">
+          <span className="text-xl font-black bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent group-hover:from-blue-600 group-hover:to-sky-500 transition-all duration-300">
+            {car.price}K
+          </span>
+          <span className="text-[10px] text-gray-400 font-semibold block uppercase tracking-wide">
+            VNĐ/ngày
           </span>
         </div>
-      )}
-    </div>
-    <div className="flex justify-between items-start">
-      <div>
-        <h3 className="font-bold text-base text-gray-900">{car.name}</h3>
-        <p className="text-gray-400 text-xs mt-0.5">{car.description}</p>
-      </div>
-      <div className="text-right">
-        <span className="text-lg font-black text-sky-500">{car.price}K</span>
-        <span className="text-[10px] text-gray-400 font-medium block uppercase">
-          VNĐ/ngày
-        </span>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 CarCard.propTypes = {
   car: PropTypes.shape({
@@ -144,22 +182,35 @@ CarCard.propTypes = {
     badge: PropTypes.string,
     badgeColor: PropTypes.string,
   }).isRequired,
+  index: PropTypes.number.isRequired,
 };
 
-// Service Card Component
-const ServiceCard = ({ icon: Icon, title, description, iconBg }) => (
-  <div className="bg-white p-10 rounded-[2.5rem] border border-gray-100 hover:shadow-2xl hover:shadow-gray-200/50 transition-all duration-500">
+// Service Card Component with hover animations
+const ServiceCard = ({ icon: Icon, title, description, iconBg }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
     <div
-      className={`w-16 h-16 rounded-2xl ${iconBg} flex items-center justify-center mb-8`}
+      className="bg-white p-10 rounded-[2.5rem] border border-gray-100 hover:border-sky-200 hover:shadow-2xl hover:shadow-sky-100/50 transition-all duration-500 group transform hover:-translate-y-2"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <Icon className="text-3xl" />
+      <div
+        className={`w-16 h-16 rounded-2xl ${iconBg} flex items-center justify-center mb-8 transition-all duration-500 group-hover:scale-110 group-hover:rotate-6`}
+      >
+        <Icon
+          className={`text-3xl transition-transform duration-500 ${isHovered ? "scale-125" : "scale-100"}`}
+        />
+      </div>
+      <h3 className="font-extrabold text-xl mb-4 group-hover:text-sky-600 transition-colors duration-300">
+        {title}
+      </h3>
+      <p className="text-sm text-gray-500 leading-relaxed font-light group-hover:text-gray-700 transition-colors duration-300">
+        {description}
+      </p>
     </div>
-    <h3 className="font-extrabold text-xl mb-4">{title}</h3>
-    <p className="text-sm text-gray-500 leading-relaxed font-light">
-      {description}
-    </p>
-  </div>
-);
+  );
+};
 
 ServiceCard.propTypes = {
   icon: PropTypes.elementType.isRequired,
@@ -222,14 +273,21 @@ const Home = () => {
                 <div className="relative">
                   <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="flex items-center gap-3 hover:bg-gray-100 rounded-full py-1.5 pl-1.5 pr-4 transition-colors"
+                    className="flex items-center gap-3 hover:bg-gray-50 rounded-full py-2 pl-2 pr-4 transition-all duration-300 border border-transparent hover:border-sky-200 hover:shadow-md"
                   >
-                    <div className="w-9 h-9 bg-gradient-to-br from-sky-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                    <div className="w-10 h-10 bg-gradient-to-br from-sky-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
                       {user.username?.charAt(0).toUpperCase() || <MdPerson />}
                     </div>
-                    <span className="hidden sm:block text-sm font-medium text-gray-700">
-                      {user.username || "User"}
-                    </span>
+                    <div className="hidden sm:flex flex-col items-start">
+                      <span className="text-sm font-bold text-gray-900">
+                        {user.username || "Người dùng"}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {user.role === "manager" || user.role === "staff"
+                          ? "Quản trị viên"
+                          : "Khách hàng"}
+                      </span>
+                    </div>
                   </button>
 
                   {/* Dropdown Menu */}
@@ -324,16 +382,22 @@ const Home = () => {
         </button>
       </div>
 
-      {/* Hero Section - Full Screen */}
+      {/* Hero Section - Full Screen with parallax effect */}
       <section className="relative min-h-screen w-full flex items-center overflow-hidden">
-        {/* Background */}
+        {/* Background with subtle animation */}
         <div className="absolute inset-0 z-0">
           <img
             alt="Hero EV"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover scale-105 animate-slow-zoom"
             src={heroBackground}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent animate-gradient-shift"></div>
+          {/* Animated overlay particles */}
+          <div className="absolute inset-0 opacity-30">
+            <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-sky-400 rounded-full animate-float-slow"></div>
+            <div className="absolute top-1/3 right-1/3 w-3 h-3 bg-emerald-400 rounded-full animate-float-slower"></div>
+            <div className="absolute bottom-1/4 left-1/3 w-2 h-2 bg-blue-400 rounded-full animate-float-fast"></div>
+          </div>
         </div>
 
         {/* Content */}
@@ -453,9 +517,14 @@ const Home = () => {
                   </div>
                 </div>
 
-                {/* Submit Button */}
-                <button className="w-full bg-sky-500 hover:bg-sky-600 text-white py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-colors">
-                  Kiểm Tra Xe
+                {/* Submit Button with gradient animation */}
+                <button className="group/btn relative w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all duration-300 overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-sky-500/50 transform hover:-translate-y-0.5">
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    Kiểm Tra Xe
+                    <MdDirectionsCar className="text-lg group-hover/btn:translate-x-1 transition-transform" />
+                  </span>
+                  {/* Animated gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-sky-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
                 </button>
               </div>
             </div>
@@ -495,20 +564,21 @@ const Home = () => {
             </div>
           </div>
 
-          {/* Car Grid - 4 columns */}
+          {/* Car Grid - 4 columns with stagger animation */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-            {carsData.map((car) => (
-              <CarCard key={car.id} car={car} />
+            {carsData.map((car, index) => (
+              <CarCard key={car.id} car={car} index={index} />
             ))}
           </div>
 
-          {/* View All Button */}
+          {/* View All Button with hover animation */}
           <div className="mt-14 text-center">
             <Link
               to="/cars"
-              className="inline-block px-8 py-3.5 border border-gray-200 rounded-full font-medium text-sm hover:border-gray-400 transition-colors"
+              className="inline-flex items-center gap-2 px-8 py-3.5 border-2 border-gray-300 rounded-full font-semibold text-sm hover:border-sky-500 hover:text-sky-600 hover:bg-sky-50 transition-all duration-300 transform hover:scale-105 group"
             >
-              Xem Toàn Bộ ({carsData.length * 4} xe)
+              <span>Xem Toàn Bộ ({carsData.length * 4} xe)</span>
+              <MdDirectionsCar className="text-lg group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
         </div>
@@ -739,33 +809,102 @@ const Home = () => {
         </div>
       </footer>
 
-      {/* Custom Styles */}
+      {/* Custom Styles with enhanced animations */}
       <style>{`
         .glass-card {
           background: rgba(255, 255, 255, 0.85);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
         }
+        
         .car-card-hover {
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
+        
         .car-card-hover:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.1);
+          transform: translateY(-12px) scale(1.02);
         }
+        
+        /* Floating animations */
         @keyframes subtle-float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-15px) rotate(3deg); }
         }
+        
+        @keyframes float-slow {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(20px, -20px); }
+        }
+        
+        @keyframes float-slower {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-15px, 15px); }
+        }
+        
+        @keyframes float-fast {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(15px, -25px); }
+        }
+        
         .ai-float {
           animation: subtle-float 4s ease-in-out infinite;
         }
+        
+        .animate-float-slow {
+          animation: float-slow 8s ease-in-out infinite;
+        }
+        
+        .animate-float-slower {
+          animation: float-slower 10s ease-in-out infinite;
+        }
+        
+        .animate-float-fast {
+          animation: float-fast 6s ease-in-out infinite;
+        }
+        
+        /* Fade in animation */
         @keyframes fade-in {
-          from { opacity: 0; transform: translateY(10px); }
+          from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        
         .animate-fade-in {
-          animation: fade-in 0.7s ease-out;
+          animation: fade-in 0.8s ease-out;
+        }
+        
+        /* Slow zoom for hero background */
+        @keyframes slow-zoom {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+        
+        .animate-slow-zoom {
+          animation: slow-zoom 20s ease-in-out infinite;
+        }
+        
+        /* Gradient shift */
+        @keyframes gradient-shift {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.9; }
+        }
+        
+        .animate-gradient-shift {
+          animation: gradient-shift 8s ease-in-out infinite;
+        }
+        
+        /* Pulse glow effect */
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(14, 165, 233, 0.3); }
+          50% { box-shadow: 0 0 40px rgba(14, 165, 233, 0.6); }
+        }
+        
+        .animate-pulse-glow {
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+        
+        /* Smooth transitions */
+        * {
+          transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
         }
       `}</style>
     </div>
