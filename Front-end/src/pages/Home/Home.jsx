@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
-import { useAuthContext } from "../../context";
 import {
   MdLocationOn,
   MdCalendarToday,
@@ -11,15 +10,11 @@ import {
   MdAccountBalanceWallet,
   MdAutoAwesome,
   MdSmartToy,
-  MdMenu,
-  MdLogout,
-  MdPerson,
-  MdHistory,
   MdDirectionsCar,
   MdEvStation,
 } from "react-icons/md";
 
-import heroBackground from "../../assets/images/home1.jpg";
+import heroBackground from "../../assets/videos/HomeVideo.mp4";
 
 // Sample car data
 const carsData = [
@@ -100,7 +95,7 @@ const carsData = [
 const filterTabs = ["Tất cả", "Sedan", "SUV", "Thể thao", "Hạng sang"];
 
 // Car Card Component with stagger animations
-const CarCard = ({ car, index }) => {
+const CarCard = ({ car, index, onBookNow }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -141,10 +136,13 @@ const CarCard = ({ car, index }) => {
           <MdElectricCar className="text-emerald-500 text-lg" />
         </div>
 
-        {/* Quick view button on hover */}
+        {/* Book now button on hover */}
         <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-          <button className="px-6 py-3 bg-white/95 backdrop-blur-sm text-gray-900 font-bold rounded-full shadow-xl transform scale-90 group-hover:scale-100 transition-transform duration-300 hover:bg-sky-500 hover:text-white">
-            Xem chi tiết
+          <button
+            onClick={() => onBookNow(car)}
+            className="px-6 py-3 bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-bold rounded-full shadow-xl transform scale-90 group-hover:scale-100 transition-all duration-300"
+          >
+            Đặt ngay
           </button>
         </div>
       </div>
@@ -183,6 +181,7 @@ CarCard.propTypes = {
     badgeColor: PropTypes.string,
   }).isRequired,
   index: PropTypes.number.isRequired,
+  onBookNow: PropTypes.func.isRequired,
 };
 
 // Service Card Component with hover animations
@@ -222,144 +221,14 @@ ServiceCard.propTypes = {
 const Home = () => {
   const [activeFilter, setActiveFilter] = useState("All Vehicles");
   const [driveMode, setDriveMode] = useState("self");
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const { user, isAuthenticated, logout } = useAuthContext();
+  const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    setShowUserMenu(false);
+  const handleBookNow = (car) => {
+    navigate("/booking", { state: { selectedCar: car } });
   };
 
   return (
-    <div className="min-h-screen w-full bg-white text-gray-900 overflow-x-hidden">
-      {/* Header - Fixed */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
-        <div className="w-full px-6 lg:px-12">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white shadow-lg shadow-sky-400/40">
-                <MdElectricCar className="text-[22px]" />
-              </div>
-              <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent">
-                EV Rental System
-              </span>
-            </Link>
-
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center gap-3">
-              <Link
-                to="/booking"
-                className="group relative flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold text-gray-700 hover:text-white overflow-hidden transition-all duration-300"
-              >
-                <span className="absolute inset-0 bg-gradient-to-r from-sky-400 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                <MdCalendarToday className="text-lg relative z-10" />
-                <span className="relative z-10">Đặt xe</span>
-              </Link>
-              <Link
-                to="/history"
-                className="group relative flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold text-gray-700 hover:text-white overflow-hidden transition-all duration-300"
-              >
-                <span className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                <MdHistory className="text-lg relative z-10" />
-                <span className="relative z-10">Lịch sử</span>
-              </Link>
-            </nav>
-
-            {/* Auth Section */}
-            <div className="flex items-center gap-4">
-              {isAuthenticated && user ? (
-                /* User Menu - Logged In */
-                <div className="relative">
-                  <button
-                    onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="flex items-center gap-3 hover:bg-gray-50 rounded-full py-2 pl-2 pr-4 transition-all duration-300 border border-transparent hover:border-sky-200 hover:shadow-md"
-                  >
-                    <div className="w-10 h-10 bg-gradient-to-br from-sky-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
-                      {user.username?.charAt(0).toUpperCase() || <MdPerson />}
-                    </div>
-                    <div className="hidden sm:flex flex-col items-start">
-                      <span className="text-sm font-bold text-gray-900">
-                        {user.username || "Người dùng"}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {user.role === "manager" || user.role === "staff"
-                          ? "Quản trị viên"
-                          : "Khách hàng"}
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Dropdown Menu */}
-                  {showUserMenu && (
-                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 animate-fade-in">
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-semibold text-gray-900">
-                          {user.username}
-                        </p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
-                      </div>
-                      <Link
-                        to="/profile"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <MdPerson className="text-lg" />
-                        Hồ sơ cá nhân
-                      </Link>
-                      <Link
-                        to="/booking"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <MdCalendarToday className="text-lg" />
-                        Đặt xe
-                      </Link>
-                      <Link
-                        to="/history"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <MdHistory className="text-lg" />
-                        Lịch sử thuê xe
-                      </Link>
-                      <div className="border-t border-gray-100 mt-2 pt-2">
-                        <button
-                          onClick={handleLogout}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors w-full"
-                        >
-                          <MdLogout className="text-lg" />
-                          Đăng xuất
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                /* Not Logged In */
-                <>
-                  <Link
-                    to="/login"
-                    className="hidden sm:block text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
-                  >
-                    Đăng nhập
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="bg-sky-500 hover:bg-sky-600 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-colors"
-                  >
-                    Đăng ký
-                  </Link>
-                </>
-              )}
-              <button className="md:hidden p-2">
-                <MdMenu className="text-2xl" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <div className="min-h-screen w-full bg-white text-gray-900 overflow-x-hidden pt-16">
       {/* AI Chat Button - Fixed */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-4 max-w-[220px] animate-fade-in">
@@ -386,8 +255,11 @@ const Home = () => {
       <section className="relative min-h-screen w-full flex items-center overflow-hidden">
         {/* Background with subtle animation */}
         <div className="absolute inset-0 z-0">
-          <img
-            alt="Hero EV"
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
             className="w-full h-full object-cover scale-105 animate-slow-zoom"
             src={heroBackground}
           />
@@ -446,9 +318,9 @@ const Home = () => {
             </div>
 
             {/* Right - Booking Form */}
-            <div className="bg-white rounded-3xl shadow-2xl p-8 lg:p-10 max-w-md lg:max-w-lg ml-auto w-full">
+            <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-8 lg:p-10 max-w-md lg:max-w-lg ml-auto w-full">
               {/* Drive Mode Toggle */}
-              <div className="flex p-1 bg-gray-100 rounded-xl mb-8">
+              <div className="flex p-1 bg-gray-100/80 rounded-xl mb-8">
                 <button
                   onClick={() => setDriveMode("self")}
                   className={`flex-1 py-3 rounded-lg text-sm font-semibold transition-all ${
@@ -477,7 +349,7 @@ const Home = () => {
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                     Điểm Đón
                   </label>
-                  <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl p-4 group focus-within:border-sky-500 focus-within:bg-white transition-all">
+                  <div className="flex items-center gap-3 bg-gray-50/80 border border-gray-200 rounded-xl p-4 group focus-within:border-sky-500 focus-within:bg-white transition-all">
                     <MdLocationOn className="text-gray-400 text-xl group-focus-within:text-sky-500" />
                     <input
                       className="bg-transparent border-none p-0 focus:ring-0 w-full text-sm font-medium placeholder:text-gray-400 outline-none"
@@ -493,12 +365,11 @@ const Home = () => {
                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                       Ngày Nhận
                     </label>
-                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl p-4">
+                    <div className="flex items-center gap-2 bg-gray-50/80 border border-gray-200 rounded-xl p-4">
                       <MdCalendarToday className="text-gray-400 text-sm" />
                       <input
                         className="bg-transparent border-none p-0 focus:ring-0 w-full text-sm font-medium outline-none"
                         type="date"
-                        defaultValue="2026-02-20"
                       />
                     </div>
                   </div>
@@ -506,12 +377,11 @@ const Home = () => {
                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                       Ngày Trả
                     </label>
-                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl p-4">
+                    <div className="flex items-center gap-2 bg-gray-50/80 border border-gray-200 rounded-xl p-4">
                       <MdCalendarToday className="text-gray-400 text-sm" />
                       <input
                         className="bg-transparent border-none p-0 focus:ring-0 w-full text-sm font-medium outline-none"
                         type="date"
-                        defaultValue="2026-02-24"
                       />
                     </div>
                   </div>
@@ -567,7 +437,12 @@ const Home = () => {
           {/* Car Grid - 4 columns with stagger animation */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
             {carsData.map((car, index) => (
-              <CarCard key={car.id} car={car} index={index} />
+              <CarCard
+                key={car.id}
+                car={car}
+                index={index}
+                onBookNow={handleBookNow}
+              />
             ))}
           </div>
 
