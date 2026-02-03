@@ -5,10 +5,6 @@ import { Login, Register } from "../pages/Auth";
 import { Booking } from "../pages/Booking";
 import { History } from "../pages/History";
 
-// Lazy load pages for better performance
-// import { lazy, Suspense } from 'react';
-// const Home = lazy(() => import('../pages/Home'));
-
 const AppRoutes = () => {
   return (
     <BrowserRouter>
