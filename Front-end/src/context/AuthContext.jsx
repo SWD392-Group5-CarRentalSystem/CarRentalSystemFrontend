@@ -1,13 +1,13 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
-import { authService } from '../services/api';
+import { createContext, useContext, useState, useEffect } from "react";
+import PropTypes from "prop-types";
+import { authService } from "../services/api";
 
 // Định nghĩa các role trong hệ thống (đồng bộ với BE)
 export const ROLES = {
-  MANAGER: 'manager',
-  STAFF: 'staff',
-  DRIVER: 'driver',
-  CUSTOMER: 'customer',
+  MANAGER: "manager",
+  STAFF: "staff",
+  DRIVER: "driver",
+  CUSTOMER: "customer",
 };
 
 const AuthContext = createContext(null);
@@ -84,18 +84,18 @@ export const AuthProvider = ({ children }) => {
 
   // Lấy redirect path dựa trên role
   const getDefaultRedirectPath = () => {
-    if (!user) return '/login';
-    
+    if (!user) return "/login";
+
     switch (user.role) {
       case ROLES.MANAGER:
-        return '/admin/dashboard';
+        return "/manager/dashboard";
       case ROLES.STAFF:
-        return '/staff/dashboard';
+        return "/staff/dashboard";
       case ROLES.DRIVER:
-        return '/driver/dashboard';
+        return "/driver/dashboard";
       case ROLES.CUSTOMER:
       default:
-        return '/';
+        return "/";
     }
   };
 
@@ -127,7 +127,7 @@ AuthProvider.propTypes = {
 export const useAuthContext = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuthContext must be used within an AuthProvider');
+    throw new Error("useAuthContext must be used within an AuthProvider");
   }
   return context;
 };

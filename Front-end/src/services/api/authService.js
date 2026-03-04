@@ -12,13 +12,16 @@ export const authService = {
         // Decode token to get user info
         try {
           const decoded = jwtDecode(response.token);
+          console.log("Decoded token:", decoded);
           const user = {
             _id: decoded.userId,
             username: decoded.username,
-            email: decoded.email || "",
-            phoneNumber: decoded.phoneNumber || "",
-            role: decoded.role || "customer",
+            email: response.data?.email || decoded.email || "",
+            phoneNumber: response.data?.phoneNumber || decoded.phoneNumber || "",
+            // Lấy role từ token (payload BE), fallback response.data, không hardcode
+            role: decoded.role || response.data?.role || "",
           };
+          console.log("User from token:", user);
           localStorage.setItem("user", JSON.stringify(user));
           response.user = user; // Add user to response for AuthContext
         } catch (decodeError) {

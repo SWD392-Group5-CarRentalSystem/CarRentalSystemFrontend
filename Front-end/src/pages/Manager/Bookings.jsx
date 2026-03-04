@@ -19,18 +19,11 @@ export default function Bookings() {
     try {
       setLoading(true);
       const response = await bookingService.getAllBookings();
-      setBookings(response.data?.data || []);
+      // axiosInstance interceptor trả về response.data trực tiếp
+      setBookings(response?.data ?? []);
     } catch (error) {
       console.error('Failed to fetch bookings:', error);
-      // Fallback to mock data
-      setBookings([
-        { id: 1, userName: "Nguyễn Văn A", userEmail: "vana@email.com", carName: "VinFast VF9", startDate: "2024-02-01", endDate: "2024-02-05", status: "active", totalPrice: 10000000 },
-        { id: 2, userName: "Trần Thị B", userEmail: "thib@email.com", carName: "Tesla Model 3", startDate: "2024-01-28", endDate: "2024-02-03", status: "completed", totalPrice: 18000000 },
-        { id: 3, userName: "Lê Văn C", userEmail: "vanc@email.com", carName: "VinFast VF8", startDate: "2024-02-05", endDate: "2024-02-10", status: "pending", totalPrice: 10000000 },
-        { id: 4, userName: "Phạm Thị D", userEmail: "thid@email.com", carName: "VinFast VF6", startDate: "2024-01-20", endDate: "2024-01-25", status: "completed", totalPrice: 7500000 },
-        { id: 5, userName: "Hoàng Văn E", userEmail: "vane@email.com", carName: "Tesla Model Y", startDate: "2024-02-03", endDate: "2024-02-08", status: "active", totalPrice: 17500000 },
-        { id: 6, userName: "Đỗ Thị F", userEmail: "thif@email.com", carName: "VinFast VF5", startDate: "2024-01-15", endDate: "2024-01-18", status: "cancelled", totalPrice: 3600000 },
-      ]);
+      setBookings([]);
     } finally {
       setLoading(false);
     }
@@ -38,33 +31,36 @@ export default function Bookings() {
 
   const getStatusStyle = (status) => {
     const styles = {
-      active: "bg-emerald-100 text-emerald-700 border-emerald-200",
-      ongoing: "bg-emerald-100 text-emerald-700 border-emerald-200",
-      completed: "bg-blue-100 text-blue-700 border-blue-200",
-      pending: "bg-amber-100 text-amber-700 border-amber-200",
-      cancelled: "bg-red-100 text-red-700 border-red-200",
+      pending:                        "bg-amber-100 text-amber-700 border-amber-200",
+      awaiting_deposit_confirmation:  "bg-orange-100 text-orange-700 border-orange-200",
+      confirmed:                      "bg-sky-100 text-sky-700 border-sky-200",
+      vehicle_delivered:              "bg-blue-100 text-blue-700 border-blue-200",
+      in_progress:                    "bg-emerald-100 text-emerald-700 border-emerald-200",
+      vehicle_returned:               "bg-indigo-100 text-indigo-700 border-indigo-200",
+      completed:                      "bg-teal-100 text-teal-700 border-teal-200",
+      cancelled:                      "bg-red-100 text-red-700 border-red-200",
+      deposit_lost:                   "bg-red-100 text-red-800 border-red-300",
     };
     return styles[status] || "bg-gray-100 text-gray-700 border-gray-200";
   };
 
   const getStatusIcon = (status) => {
-    const icons = {
-      active: <Clock size={16} />,
-      ongoing: <Clock size={16} />,
-      completed: <CheckCircle size={16} />,
-      pending: <Clock size={16} />,
-      cancelled: <XCircle size={16} />,
-    };
-    return icons[status] || <Clock size={16} />;
+    if (["completed", "confirmed"].includes(status)) return <CheckCircle size={16} />;
+    if (["cancelled", "deposit_lost"].includes(status)) return <XCircle size={16} />;
+    return <Clock size={16} />;
   };
 
   const getStatusText = (status) => {
     const texts = {
-      active: "Đang thuê",
-      ongoing: "Đang thuê",
-      completed: "Hoàn thành",
-      pending: "Chờ xác nhận",
-      cancelled: "Đã hủy",
+      pending:                        "Chờ xác nhận",
+      awaiting_deposit_confirmation:  "Chờ duyệt cọc",
+      confirmed:                      "Đã xác nhận",
+      vehicle_delivered:              "Đã giao xe",
+      in_progress:                    "Đang thuê",
+      vehicle_returned:               "Đã trả xe",
+      completed:                      "Hoàn thành",
+      cancelled:                      "Đã hủy",
+      deposit_lost:                   "Mất cọc",
     };
     return texts[status] || status;
   };
@@ -81,13 +77,15 @@ export default function Bookings() {
   };
 
   const filteredBookings = bookings.filter(booking => {
-    const matchesSearch = 
-      booking.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.carName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.userEmail?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+    const customerName = booking.customerId?.username || String(booking.customerId || "");
+    const vehicleName = booking.vehicleId?.vehicleName || String(booking.vehicleId || "");
+    const matchesSearch =
+      customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicleName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      booking.pickupLocation?.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = statusFilter === "all" || booking.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -129,10 +127,15 @@ export default function Bookings() {
             className="px-5 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
           >
             <option value="all">Tất cả trạng thái</option>
-            <option value="active">Đang thuê</option>
             <option value="pending">Chờ xác nhận</option>
+            <option value="awaiting_deposit_confirmation">Chờ duyệt cọc</option>
+            <option value="confirmed">Đã xác nhận</option>
+            <option value="vehicle_delivered">Đã giao xe</option>
+            <option value="in_progress">Đang thuê</option>
+            <option value="vehicle_returned">Đã trả xe</option>
             <option value="completed">Hoàn thành</option>
             <option value="cancelled">Đã hủy</option>
+            <option value="deposit_lost">Mất cọc</option>
           </select>
         </div>
       </div>
@@ -153,15 +156,20 @@ export default function Bookings() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredBookings.map((booking) => (
-                <tr key={booking.id} className="hover:bg-linear-to-r hover:from-blue-50 hover:to-cyan-50 transition-colors">
+                <tr key={booking._id} className="hover:bg-linear-to-r hover:from-blue-50 hover:to-cyan-50 transition-colors">
                   <td className="px-6 py-4">
                     <div>
-                      <p className="font-semibold text-gray-800">{booking.userName}</p>
-                      <p className="text-sm text-gray-500">{booking.userEmail}</p>
+                      <p className="font-semibold text-gray-800">
+                        {booking.customerId?.username || String(booking.customerId || "N/A").slice(-8).toUpperCase()}
+                      </p>
+                      <p className="text-xs text-gray-400">{booking.rentalType === "with_driver" ? "Có tài xế" : "Tự lái"}</p>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="font-medium text-gray-800">{booking.carName}</p>
+                    <p className="font-medium text-gray-800">
+                      {booking.vehicleId?.vehicleName || String(booking.vehicleId || "N/A").slice(-8).toUpperCase()}
+                    </p>
+                    <p className="text-xs text-gray-400">{booking.pickupLocation || ""}</p>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm">
@@ -170,7 +178,7 @@ export default function Bookings() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="font-bold text-blue-600">{formatCurrency(booking.totalPrice)}</p>
+                    <p className="font-bold text-blue-600">{formatCurrency(Number(booking.totalAmount) || 0)}</p>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-semibold border ${getStatusStyle(booking.status)}`}>

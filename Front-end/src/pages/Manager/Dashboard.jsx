@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { Car, Users, Wallet, Activity, RefreshCw } from "lucide-react";
 import StatCard from "../../components/common/StatCard";
-import { dashboardService, carService, bookingService } from "../../services/api";
+import { dashboardService, vehicleService, bookingService } from "../../services/api";
 
 export default function Dashboard() {
   const { setBreadcrumb } = useOutletContext();
   const [stats, setStats] = useState({
-    totalCars: 0,
-    rentedCars: 0,
+    totalVehicles: 0,
+    rentedVehicles: 0,
     totalDrivers: 0,
     todayRevenue: 0,
     revenueChange: 0
@@ -25,45 +25,43 @@ export default function Dashboard() {
     try {
       setLoading(true);
       
-      // Fetch all data in parallel
-      const [carsRes, bookingsRes] = await Promise.all([
-        carService.getAllCars(),
+      // axiosInstance interceptor trả về response.data trực tiếp
+      const [vehiclesRes, bookingsRes] = await Promise.all([
+        vehicleService.getAllVehicles(),
         bookingService.getAllBookings()
       ]);
 
-      // Calculate statistics
-      const cars = carsRes.data?.data || [];
-      const bookings = bookingsRes.data?.data || [];
+      const vehicles = vehiclesRes?.data ?? [];
+      const bookings = bookingsRes?.data ?? [];
       
-      const totalCars = cars.length;
-      const rentedCars = bookings.filter(b => b.status === 'active' || b.status === 'ongoing').length;
+      const totalVehicles = vehicles.length;
+      const rentedVehicles = bookings.filter(b =>
+        ["in_progress", "vehicle_delivered", "vehicle_returned", "confirmed"].includes(b.status)
+      ).length;
       
-      // Get unique drivers
       const uniqueDrivers = new Set(bookings.map(b => b.driverId).filter(Boolean));
       const totalDrivers = uniqueDrivers.size;
 
-      // Calculate today's revenue
       const today = new Date().toISOString().split('T')[0];
       const todayBookings = bookings.filter(b => {
         const bookingDate = new Date(b.createdAt).toISOString().split('T')[0];
-        return bookingDate === today && (b.status === 'completed' || b.status === 'active');
+        return bookingDate === today && b.status === 'completed';
       });
-      const todayRevenue = todayBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+      const todayRevenue = todayBookings.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
 
-      // Calculate yesterday's revenue for comparison
       const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
       const yesterdayBookings = bookings.filter(b => {
         const bookingDate = new Date(b.createdAt).toISOString().split('T')[0];
-        return bookingDate === yesterday && (b.status === 'completed' || b.status === 'active');
+        return bookingDate === yesterday && b.status === 'completed';
       });
-      const yesterdayRevenue = yesterdayBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+      const yesterdayRevenue = yesterdayBookings.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
       const revenueChange = yesterdayRevenue > 0 
         ? Math.round(((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100)
         : 0;
 
       setStats({
-        totalCars,
-        rentedCars,
+        totalVehicles,
+        rentedVehicles,
         totalDrivers,
         todayRevenue,
         revenueChange
@@ -91,33 +89,45 @@ export default function Dashboard() {
 
   const getStatusText = (status) => {
     const statusMap = {
-      'active': 'Đang thuê',
-      'ongoing': 'Đang thuê',
-      'completed': 'Hoàn thành',
-      'cancelled': 'Đã hủy',
-      'pending': 'Chờ xác nhận'
+      pending:                        'Chờ xác nhận',
+      awaiting_deposit_confirmation:  'Chờ duyệt cọc',
+      confirmed:                      'Đã xác nhận',
+      vehicle_delivered:              'Đã giao xe',
+      in_progress:                    'Đang thuê',
+      vehicle_returned:               'Đã trả xe',
+      completed:                      'Hoàn thành',
+      cancelled:                      'Đã hủy',
+      deposit_lost:                   'Mất cọc',
     };
     return statusMap[status] || status;
   };
 
   const getStatusColor = (status) => {
     const colorMap = {
-      'active': 'text-emerald-700',
-      'ongoing': 'text-emerald-700',
-      'completed': 'text-blue-700',
-      'cancelled': 'text-red-700',
-      'pending': 'text-amber-700'
+      pending:                        'text-amber-700',
+      awaiting_deposit_confirmation:  'text-orange-700',
+      confirmed:                      'text-sky-700',
+      vehicle_delivered:              'text-blue-700',
+      in_progress:                    'text-emerald-700',
+      vehicle_returned:               'text-indigo-700',
+      completed:                      'text-teal-700',
+      cancelled:                      'text-red-700',
+      deposit_lost:                   'text-red-800',
     };
     return colorMap[status] || 'text-gray-700';
   };
 
   const getStatusBg = (status) => {
     const bgMap = {
-      'active': 'bg-emerald-100',
-      'ongoing': 'bg-emerald-100',
-      'completed': 'bg-blue-100',
-      'cancelled': 'bg-red-100',
-      'pending': 'bg-amber-100'
+      pending:                        'bg-amber-100',
+      awaiting_deposit_confirmation:  'bg-orange-100',
+      confirmed:                      'bg-sky-100',
+      vehicle_delivered:              'bg-blue-100',
+      in_progress:                    'bg-emerald-100',
+      vehicle_returned:               'bg-indigo-100',
+      completed:                      'bg-teal-100',
+      cancelled:                      'bg-red-100',
+      deposit_lost:                   'bg-red-100',
     };
     return bgMap[status] || 'bg-gray-100';
   };
@@ -160,13 +170,13 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
           <StatCard
             title="Tổng xe"
-            value={stats.totalCars.toString()}
+            value={stats.totalVehicles.toString()}
             icon={<Car size={20} />}
             gradient="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600"
           />
           <StatCard
             title="Xe đang thuê"
-            value={stats.rentedCars.toString()}
+            value={stats.rentedVehicles.toString()}
             icon={<Activity size={20} />}
             gradient="bg-gradient-to-br from-emerald-500 via-green-600 to-teal-600"
           />
@@ -209,10 +219,10 @@ export default function Dashboard() {
               >
                 <div>
                   <p className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                    {booking.userName || booking.user?.name || 'N/A'}
+                    {booking.customerId?.username || 'N/A'}
                   </p>
                   <p className="text-sm text-gray-500 mt-0.5">
-                    {booking.carName || booking.vehicle?.name || booking.vehicleName || 'N/A'}
+                    {booking.vehicleId?.vehicleName || 'N/A'}
                   </p>
                 </div>
                 <span className={`font-semibold px-3 py-1 rounded-lg text-sm ${getStatusColor(booking.status)} ${getStatusBg(booking.status)}`}>

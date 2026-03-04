@@ -3,30 +3,46 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
-    LOGOUT: '/auth/logout',
-    REFRESH_TOKEN: '/auth/refresh-token',
-    PROFILE: '/auth/profile',
   },
 
-  // Car endpoints
-  CARS: {
-    BASE: '/cars',
-    SEARCH: '/cars/search',
-    DETAILS: (id) => `/cars/${id}`,
+  // Staff endpoints
+  STAFF: {
+    BASE: '/auth/staff',
+    DETAILS: (id) => `/auth/staff/${id}`,
+  },
+
+  // Driver endpoints
+  DRIVER: {
+    BASE: '/auth/driver',
+    DETAILS: (id) => `/auth/driver/${id}`,
+  },
+
+  // Vehicle endpoints
+  VEHICLES: {
+    BASE: '/vehicle',
+    DETAILS: (id) => `/vehicle/${id}`,
   },
 
   // Booking endpoints
   BOOKINGS: {
     BASE: '/bookings',
-    USER_BOOKINGS: '/bookings/user',
     DETAILS: (id) => `/bookings/${id}`,
-    CANCEL: (id) => `/bookings/${id}/cancel`,
+    UPDATE_STATUS: (id) => `/bookings/${id}/status`,
+    CUSTOMER_CONFIRM_DEPOSIT: (id) => `/bookings/${id}/customer-confirm-deposit`,
+    STAFF_CONFIRM_DEPOSIT: (id) => `/bookings/${id}/staff-confirm-deposit`,
+    BY_CUSTOMER: (customerId) => `/bookings/customer/${customerId}`,
+    BY_DRIVER: (driverId) => `/bookings/driver/${driverId}`,
+    BY_STATUS: (status) => `/bookings/status/${status}`,
   },
+};
 
-  // User endpoints
-  USERS: {
-    BASE: '/users',
-    PROFILE: '/users/profile',
-    UPDATE_PROFILE: '/users/profile/update',
-  },
+export const BOOKING_STATUS = {
+  PENDING: 'pending',
+  CONFIRM: 'confirm',
+  VEHICLE_DELIVERED: 'vehicle_delivered',
+  IN_PROGRESS: 'in_progress',
+  VEHICLE_RETURNED: 'vehicle_returned',
+  COMPLETED: 'completed',
+  CANCELLED: 'cancelled',
+  DEPOSIT_LOST: 'deposit_lost',
 };

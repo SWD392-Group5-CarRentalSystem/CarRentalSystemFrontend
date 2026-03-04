@@ -3,31 +3,56 @@ import axiosInstance from './axiosConfig';
 export const bookingService = {
   // Get all bookings
   getAllBookings: async (params) => {
-    return await axiosInstance.get('/bookings', { params });
+    return await axiosInstance.get('/booking', { params });
   },
 
   // Get booking by ID
   getBookingById: async (id) => {
-    return await axiosInstance.get(`/bookings/${id}`);
+    return await axiosInstance.get(`/booking/${id}`);
   },
 
   // Create new booking
   createBooking: async (bookingData) => {
-    return await axiosInstance.post('/bookings', bookingData);
+    return await axiosInstance.post('/booking', bookingData);
   },
 
-  // Update booking
+  // Update booking info
   updateBooking: async (id, bookingData) => {
-    return await axiosInstance.put(`/bookings/${id}`, bookingData);
+    return await axiosInstance.put(`/booking/${id}`, bookingData);
   },
 
-  // Cancel booking
-  cancelBooking: async (id) => {
-    return await axiosInstance.patch(`/bookings/${id}/cancel`);
+  // Delete booking
+  deleteBooking: async (id) => {
+    return await axiosInstance.delete(`/booking/${id}`);
   },
 
-  // Get user bookings
-  getUserBookings: async () => {
-    return await axiosInstance.get('/bookings/user');
+  // Update booking status
+  updateBookingStatus: async (id, status) => {
+    return await axiosInstance.patch(`/booking/${id}/status`, { status });
+  },
+
+  // Customer confirms deposit transfer
+  customerConfirmDeposit: async (id) => {
+    return await axiosInstance.patch(`/booking/${id}/customer-confirm-deposit`);
+  },
+
+  // Staff confirms deposit received
+  staffConfirmDeposit: async (id) => {
+    return await axiosInstance.patch(`/booking/${id}/staff-confirm-deposit`);
+  },
+
+  // Get bookings by customer ID
+  getBookingsByCustomer: async (customerId) => {
+    return await axiosInstance.get(`/booking/customer/${customerId}`);
+  },
+
+  // Get bookings by driver ID
+  getBookingsByDriver: async (driverId) => {
+    return await axiosInstance.get(`/booking/driver/${driverId}`);
+  },
+
+  // Get bookings by status
+  getBookingsByStatus: async (status) => {
+    return await axiosInstance.get(`/booking/status/${status}`);
   },
 };

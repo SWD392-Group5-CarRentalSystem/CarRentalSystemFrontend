@@ -1,35 +1,27 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { Car, Plus, Search, Filter, Edit, Trash2, Eye } from "lucide-react";
-import { carService } from "../../services/api";
+import { vehicleService } from "../../services/api";
 
-export default function Cars() {
+export default function Vehicles() {
   const { setBreadcrumb } = useOutletContext();
-  const [cars, setCars] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    setBreadcrumb({ title: "Cars" });
-    fetchCars();
+    setBreadcrumb({ title: "Vehicles" });
+    fetchVehicles();
   }, []);
 
-  const fetchCars = async () => {
+  const fetchVehicles = async () => {
     try {
       setLoading(true);
-      const response = await carService.getAllCars();
-      setCars(response.data?.data || []);
+      const response = await vehicleService.getAllVehicles();
+      setVehicles(response.data?.data || []);
     } catch (error) {
-      console.error('Failed to fetch cars:', error);
-      // Fallback to mock data for demo
-      setCars([
-        { id: 1, name: "VinFast VF9", model: "VF9", brand: "VinFast", year: 2024, status: "available", price: 2500000, image: "🚙" },
-        { id: 2, name: "VinFast VF8", model: "VF8", brand: "VinFast", year: 2024, status: "rented", price: 2000000, image: "🚗" },
-        { id: 3, name: "Tesla Model 3", model: "Model 3", brand: "Tesla", year: 2023, status: "available", price: 3000000, image: "🚘" },
-        { id: 4, name: "VinFast VF6", model: "VF6", brand: "VinFast", year: 2024, status: "maintenance", price: 1500000, image: "🚕" },
-        { id: 5, name: "Tesla Model Y", model: "Model Y", brand: "Tesla", year: 2023, status: "available", price: 3500000, image: "🚙" },
-        { id: 6, name: "VinFast VF5", model: "VF5", brand: "VinFast", year: 2024, status: "available", price: 1200000, image: "🚗" },
-      ]);
+      console.error('Failed to fetch vehicles:', error);
+      setVehicles([]);
     } finally {
       setLoading(false);
     }
@@ -38,6 +30,7 @@ export default function Cars() {
   const getStatusStyle = (status) => {
     const styles = {
       available: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      unavailable: "bg-red-100 text-red-700 border-red-200",
       rented: "bg-blue-100 text-blue-700 border-blue-200",
       maintenance: "bg-amber-100 text-amber-700 border-amber-200",
     };
@@ -47,10 +40,18 @@ export default function Cars() {
   const getStatusText = (status) => {
     const texts = {
       available: "Sẵn sàng",
+      unavailable: "Không sẵn",
       rented: "Đang thuê",
       maintenance: "Bảo trì",
     };
     return texts[status] || status;
+  };
+
+  // Convert boolean vehicleStatus to string key
+  const getStatusKey = (vehicle) => {
+    if (vehicle.vehicleStatus === false) return "unavailable";
+    if (vehicle.vehicleStatus === true) return "available";
+    return vehicle.status || "available";
   };
 
   const formatCurrency = (amount) => {
@@ -60,10 +61,10 @@ export default function Cars() {
     }).format(amount);
   };
 
-  const filteredCars = cars.filter(car =>
-    car.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    car.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    car.brand?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredVehicles = vehicles.filter(vehicle =>
+    vehicle.vehicleName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vehicle.vehicleType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vehicle.vehicleDetail?.vehicleBrands?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -81,7 +82,7 @@ export default function Cars() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Quản lý xe</h1>
-          <p className="text-gray-600 mt-1">Tổng cộng {cars.length} xe</p>
+          <p className="text-gray-600 mt-1">Tổng cộng {vehicles.length} xe</p>
         </div>
         <button className="flex items-center gap-2 px-5 py-3 bg-linear-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg hover:shadow-xl">
           <Plus size={20} />
@@ -109,37 +110,48 @@ export default function Cars() {
         </div>
       </div>
 
-      {/* Cars Grid */}
+      {/* Vehicles Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredCars.map((car) => (
+        {filteredVehicles.map((vehicle) => {
+          const statusKey = getStatusKey(vehicle);
+          return (
           <div
-            key={car.id}
+            key={vehicle._id}
             className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 group hover:-translate-y-1"
           >
-            {/* Car Image */}
-            <div className="h-48 bg-linear-to-br from-blue-100 via-cyan-50 to-blue-50 flex items-center justify-center text-6xl relative overflow-hidden">
+            {/* Vehicle Image */}
+            <div className="h-48 bg-linear-to-br from-blue-100 via-cyan-50 to-blue-50 relative overflow-hidden">
               <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <span className="relative z-10">{car.image}</span>
+              {vehicle.vehicleDetail?.vehicleImage ? (
+                <img
+                  src={vehicle.vehicleDetail.vehicleImage}
+                  alt={vehicle.vehicleName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-6xl">🚗</div>
+              )}
             </div>
 
-            {/* Car Info */}
+            {/* Vehicle Info */}
             <div className="p-6">
               <div className="flex justify-between items-start mb-3">
                 <div>
                   <h3 className="text-xl font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
-                    {car.name}
+                    {vehicle.vehicleName}
                   </h3>
-                  <p className="text-sm text-gray-500">{car.brand} • {car.year}</p>
+                  <p className="text-sm text-gray-500">{vehicle.vehicleDetail?.vehicleBrands} • {vehicle.vehicleDetail?.vehicleYear}</p>
                 </div>
-                <span className={`px-3 py-1 rounded-lg text-xs font-semibold border ${getStatusStyle(car.status)}`}>
-                  {getStatusText(car.status)}
+                <span className={`px-3 py-1 rounded-lg text-xs font-semibold border ${getStatusStyle(statusKey)}`}>
+                  {getStatusText(statusKey)}
                 </span>
               </div>
 
               <div className="mb-4 pb-4 border-b border-gray-100">
-                <p className="text-2xl font-bold text-blue-600">
-                  {formatCurrency(car.price)}
-                  <span className="text-sm text-gray-500 font-normal">/ngày</span>
+                <p className="text-sm text-gray-500">
+                  <span className="font-semibold text-gray-700">{vehicle.vehicleType}</span>
+                  {vehicle.vehicleDetail?.vehicleSeatCount ? ` • ${vehicle.vehicleDetail.vehicleSeatCount} chỗ` : ""}
+                  {vehicle.vehicleDetail?.vehicleColor ? ` • ${vehicle.vehicleDetail.vehicleColor}` : ""}
                 </p>
               </div>
 
@@ -158,10 +170,11 @@ export default function Cars() {
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
-      {filteredCars.length === 0 && (
+      {filteredVehicles.length === 0 && (
         <div className="text-center py-12">
           <Car size={48} className="mx-auto text-gray-400 mb-4" />
           <p className="text-gray-500 font-medium">Không tìm thấy xe nào</p>
