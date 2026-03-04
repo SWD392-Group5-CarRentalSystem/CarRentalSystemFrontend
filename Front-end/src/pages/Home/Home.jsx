@@ -15,84 +15,9 @@ import {
 } from "react-icons/md";
 
 import heroBackground from "../../assets/videos/HomeVideo.mp4";
+import { vehicleService } from "../../services/api";
 
-// Sample car data
-const carsData = [
-  {
-    id: 1,
-    name: "VinFast VF8",
-    description: "SUV điện • Tầm xa 400km",
-    price: 1500,
-    image: "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=600",
-    badge: "TIẾT KIỆM",
-    badgeColor: "bg-emerald-500",
-  },
-  {
-    id: 2,
-    name: "VinFast VF9",
-    description: "SUV 7 chỗ • Tầm xa 450km",
-    price: 2200,
-    image: "https://images.unsplash.com/photo-1617788138017-80ad40651399?w=600",
-    badge: "MỚI",
-    badgeColor: "bg-sky-500",
-  },
-  {
-    id: 3,
-    name: "Tesla Model 3",
-    description: "Sedan thể thao • 0-100: 3.3s",
-    price: 1800,
-    image: "https://images.unsplash.com/photo-1619767886558-efdc259cde1a?w=600",
-    badge: "HOT",
-    badgeColor: "bg-amber-500",
-  },
-  {
-    id: 4,
-    name: "Tesla Model Y",
-    description: "SUV 7 chỗ • Dẫn động 4 bánh",
-    price: 2000,
-    image: "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=600",
-    badge: null,
-    badgeColor: null,
-  },
-  {
-    id: 5,
-    name: "Hyundai Ioniq 5",
-    description: "Crossover điện • Tầm xa 380km",
-    price: 1600,
-    image: "https://images.unsplash.com/photo-1617788138017-80ad40651399?w=600",
-    badge: null,
-    badgeColor: null,
-  },
-  {
-    id: 6,
-    name: "Kia EV6",
-    description: "GT-Line • 0-100: 5.2s",
-    price: 1700,
-    image: "https://images.unsplash.com/photo-1619767886558-efdc259cde1a?w=600",
-    badge: null,
-    badgeColor: null,
-  },
-  {
-    id: 7,
-    name: "Mercedes EQS",
-    description: "Sedan hạng sang • Tầm xa 700km",
-    price: 4500,
-    image: "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=600",
-    badge: null,
-    badgeColor: null,
-  },
-  {
-    id: 8,
-    name: "BMW iX",
-    description: "SAV điện • Công nghệ tự lái",
-    price: 3800,
-    image: "https://images.unsplash.com/photo-1617788138017-80ad40651399?w=600",
-    badge: null,
-    badgeColor: null,
-  },
-];
-
-const filterTabs = ["Tất cả", "Sedan", "SUV", "Thể thao", "Hạng sang"];
+const filterTabs = ["Tất cả", "SUV", "Sedan", "Crossover", "Coupe"];
 
 // Car Card Component with stagger animations
 const CarCard = ({ car, index, onBookNow }) => {
@@ -158,12 +83,19 @@ const CarCard = ({ car, index, onBookNow }) => {
           </p>
         </div>
         <div className="text-right">
-          <span className="text-xl font-black bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent group-hover:from-blue-600 group-hover:to-sky-500 transition-all duration-300">
-            {car.price}K
-          </span>
-          <span className="text-[10px] text-gray-400 font-semibold block uppercase tracking-wide">
-            VNĐ/ngày
-          </span>
+          {car.price ? (
+            <>
+              <p className="text-[10px] text-gray-400 leading-none">từ</p>
+              <p className="text-sm font-black text-sky-600 leading-tight">
+                {(car.price * 1000).toLocaleString("vi-VN")}đ
+              </p>
+              <p className="text-[10px] text-gray-400">/ngày</p>
+            </>
+          ) : (
+            <span className="text-xs font-bold text-sky-500 bg-sky-50 px-2 py-1 rounded-full">
+              Liên hệ
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -172,10 +104,9 @@ const CarCard = ({ car, index, onBookNow }) => {
 
 CarCard.propTypes = {
   car: PropTypes.shape({
-    id: PropTypes.number.isRequired,
+    id: PropTypes.string,
     name: PropTypes.string.isRequired,
     description: PropTypes.string.isRequired,
-    price: PropTypes.number.isRequired,
     image: PropTypes.string.isRequired,
     badge: PropTypes.string,
     badgeColor: PropTypes.string,
@@ -219,12 +150,44 @@ ServiceCard.propTypes = {
 };
 
 const Home = () => {
-  const [activeFilter, setActiveFilter] = useState("All Vehicles");
+  const [activeFilter, setActiveFilter] = useState("Tất cả");
   const [driveMode, setDriveMode] = useState("self");
+  const [vehicles, setVehicles] = useState([]);
+  const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    vehicleService.getAllVehicles()
+      .then((res) => {
+        const data = Array.isArray(res) ? res : (res?.data?.data ?? res?.data ?? []);
+        setVehicles(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => console.error("Failed to fetch vehicles:", err))
+      .finally(() => setVehiclesLoading(false));
+  }, []);
+
+  // Transform DB vehicle schema → format Booking page expects
+  const toCarCard = (v) => ({
+    _id: v._id,
+    id: v._id,
+    name: v.vehicleName,
+    description: `${v.vehicleType} • ${v.vehicleDetail?.vehicleSeatCount} chỗ`,
+    image: v.vehicleDetail?.vehicleImage || "https://images.unsplash.com/photo-1617788138017-80ad40651399?w=600",
+    seats: v.vehicleDetail?.vehicleSeatCount,
+    transmission: "Số tự động",
+    fuel: "Điện",
+    price: v.price ?? 0,
+    badge: v.vehicleDetail?.vehicleYear >= 2024 ? "MỚI" : null,
+    badgeColor: v.vehicleDetail?.vehicleYear >= 2024 ? "bg-sky-500" : null,
+  });
+
+  const filteredVehicleCards = (activeFilter === "Tất cả"
+    ? vehicles
+    : vehicles.filter((v) => v.vehicleType === activeFilter)
+  ).slice(0, 8).map(toCarCard);
+
   const handleBookNow = (car) => {
-    navigate("/booking", { state: { selectedCar: car } });
+    navigate("/booking", { state: { selectedVehicle: car } });
   };
 
   return (
@@ -316,94 +279,113 @@ const Home = () => {
                 </p>
               </div>
             </div>
-
-            {/* Right - Booking Form */}
-            <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-8 lg:p-10 max-w-md lg:max-w-lg ml-auto w-full">
-              {/* Drive Mode Toggle */}
-              <div className="flex p-1 bg-gray-100/80 rounded-xl mb-8">
-                <button
-                  onClick={() => setDriveMode("self")}
-                  className={`flex-1 py-3 rounded-lg text-sm font-semibold transition-all ${
-                    driveMode === "self"
-                      ? "bg-white shadow-sm text-gray-900"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  Tự Lái
-                </button>
-                <button
-                  onClick={() => setDriveMode("driver")}
-                  className={`flex-1 py-3 rounded-lg text-sm font-semibold transition-all ${
-                    driveMode === "driver"
-                      ? "bg-white shadow-sm text-gray-900"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  Có Tài Xế
-                </button>
-              </div>
-
-              <div className="space-y-5">
-                {/* Pickup Location */}
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    Điểm Đón
-                  </label>
-                  <div className="flex items-center gap-3 bg-gray-50/80 border border-gray-200 rounded-xl p-4 group focus-within:border-sky-500 focus-within:bg-white transition-all">
-                    <MdLocationOn className="text-gray-400 text-xl group-focus-within:text-sky-500" />
-                    <input
-                      className="bg-transparent border-none p-0 focus:ring-0 w-full text-sm font-medium placeholder:text-gray-400 outline-none"
-                      placeholder="Nhập sân bay hoặc địa điểm"
-                      type="text"
-                    />
-                  </div>
-                </div>
-
-                {/* Date Range */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                      Ngày Nhận
-                    </label>
-                    <div className="flex items-center gap-2 bg-gray-50/80 border border-gray-200 rounded-xl p-4">
-                      <MdCalendarToday className="text-gray-400 text-sm" />
-                      <input
-                        className="bg-transparent border-none p-0 focus:ring-0 w-full text-sm font-medium outline-none"
-                        type="date"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                      Ngày Trả
-                    </label>
-                    <div className="flex items-center gap-2 bg-gray-50/80 border border-gray-200 rounded-xl p-4">
-                      <MdCalendarToday className="text-gray-400 text-sm" />
-                      <input
-                        className="bg-transparent border-none p-0 focus:ring-0 w-full text-sm font-medium outline-none"
-                        type="date"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Submit Button with gradient animation */}
-                <button className="group/btn relative w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all duration-300 overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-sky-500/50 transform hover:-translate-y-0.5">
-                  <span className="relative z-10 flex items-center justify-center gap-2">
-                    Kiểm Tra Xe
-                    <MdDirectionsCar className="text-lg group-hover/btn:translate-x-1 transition-transform" />
-                  </span>
-                  {/* Animated gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-sky-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </section>
 
+      {/* Booking Form - Floating between Hero and Fleet */}
+      <div className="relative z-30 -mt-24 mb-8 px-4 lg:px-8 xl:px-12">
+        <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl p-5 lg:p-6 max-w-7xl mx-auto border border-white/50">
+          {/* Drive Mode Toggle - Top Row (inline width) */}
+          <div className="inline-flex items-center gap-2 mb-4">
+            <button
+              onClick={() => setDriveMode("self")}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
+                driveMode === "self"
+                  ? "bg-sky-500 text-white shadow-md shadow-sky-500/30"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              <MdDirectionsCar className="text-base" />
+              Tự lái
+            </button>
+            <button
+              onClick={() => setDriveMode("driver")}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
+                driveMode === "driver"
+                  ? "bg-sky-500 text-white shadow-md shadow-sky-500/30"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              <MdVerifiedUser className="text-base" />
+              Có tài xế
+            </button>
+          </div>
+
+          {/* Form Fields - Bottom Row (full width) */}
+          <div className="flex flex-col lg:flex-row lg:items-end gap-3">
+            {/* Form Fields */}
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+              {/* Pickup Location */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
+                  Điểm đón
+                </label>
+                <div className="flex items-center gap-2 bg-gray-50/80 border border-gray-200 rounded-xl px-3 py-2.5 group focus-within:border-sky-500 focus-within:bg-white transition-all">
+                  <MdLocationOn className="text-gray-400 text-lg group-focus-within:text-sky-500 shrink-0" />
+                  <input
+                    className="bg-transparent border-none p-0 focus:ring-0 w-full text-sm font-medium placeholder:text-gray-400 outline-none"
+                    placeholder="Thành phố hoặc sân bay"
+                    type="text"
+                  />
+                </div>
+              </div>
+
+              {/* Drop-off Location */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
+                  Điểm trả
+                </label>
+                <div className="flex items-center gap-2 bg-gray-50/80 border border-gray-200 rounded-xl px-3 py-2.5 group focus-within:border-sky-500 focus-within:bg-white transition-all">
+                  <MdLocationOn className="text-gray-400 text-lg group-focus-within:text-sky-500 shrink-0" />
+                  <input
+                    className="bg-transparent border-none p-0 focus:ring-0 w-full text-sm font-medium placeholder:text-gray-400 outline-none"
+                    placeholder="Giống điểm đón"
+                    type="text"
+                  />
+                </div>
+              </div>
+
+              {/* Pickup Date */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
+                  Ngày nhận xe
+                </label>
+                <div className="flex items-center gap-2 bg-gray-50/80 border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-sky-500 focus-within:bg-white transition-all">
+                  <MdCalendarToday className="text-gray-400 text-base shrink-0" />
+                  <input
+                    className="bg-transparent border-none p-0 focus:ring-0 w-full text-sm font-medium outline-none"
+                    type="date"
+                  />
+                </div>
+              </div>
+
+              {/* Return Date */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
+                  Ngày trả xe
+                </label>
+                <div className="flex items-center gap-2 bg-gray-50/80 border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-sky-500 focus-within:bg-white transition-all">
+                  <MdCalendarToday className="text-gray-400 text-base shrink-0" />
+                  <input
+                    className="bg-transparent border-none p-0 focus:ring-0 w-full text-sm font-medium outline-none"
+                    type="date"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Search Button */}
+            <button className="shrink-0 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white py-3 px-8 rounded-xl font-bold text-sm uppercase tracking-wider transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-sky-500/30 flex items-center justify-center gap-2 group">
+              <span>Tìm xe</span>
+              <MdDirectionsCar className="text-lg group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Fleet Section - Full Width */}
-      <section className="py-20 lg:py-28 bg-white w-full" id="fleet">
+      <section className="py-12 lg:py-20 bg-white w-full" id="fleet">
         <div className="w-full px-6 lg:px-12 xl:px-20">
           {/* Section Header */}
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-12 gap-6">
@@ -436,23 +418,29 @@ const Home = () => {
 
           {/* Car Grid - 4 columns with stagger animation */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-            {carsData.map((car, index) => (
+            {vehiclesLoading ? (
+              <div className="col-span-4 flex items-center justify-center py-16">
+                <div className="w-10 h-10 border-4 border-sky-200 border-t-sky-500 rounded-full animate-spin" />
+              </div>
+            ) : filteredVehicleCards.length > 0 ? filteredVehicleCards.map((car, index) => (
               <CarCard
                 key={car.id}
                 car={car}
                 index={index}
                 onBookNow={handleBookNow}
               />
-            ))}
+            )) : (
+              <div className="col-span-4 text-center py-16 text-gray-400">Không có xe nào</div>
+            )}
           </div>
 
           {/* View All Button with hover animation */}
           <div className="mt-14 text-center">
             <Link
-              to="/cars"
+              to="/vehicles"
               className="inline-flex items-center gap-2 px-8 py-3.5 border-2 border-gray-300 rounded-full font-semibold text-sm hover:border-sky-500 hover:text-sky-600 hover:bg-sky-50 transition-all duration-300 transform hover:scale-105 group"
             >
-              <span>Xem Toàn Bộ ({carsData.length * 4} xe)</span>
+              <span>Xem Toàn Bộ ({vehicles.length} xe)</span>
               <MdDirectionsCar className="text-lg group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
@@ -526,7 +514,7 @@ const Home = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link
-                  to="/cars"
+                  to="/vehicles"
                   className="px-10 py-4 bg-sky-500 hover:bg-sky-600 rounded-full font-bold text-sm uppercase tracking-wider transition-colors"
                 >
                   Khám Phá Đội Xe

@@ -1,6 +1,6 @@
 const Footer = () => {
   return (
-    <footer className="bg-slate-800 text-white mt-auto py-8">
+    <footer className="bg-[#090C0C] text-white mt-auto py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div>
@@ -27,7 +27,7 @@ const Footer = () => {
             </div>
           </div>
         </div>
-        <div className="text-center pt-8 border-t border-slate-700">
+        <div className="text-center pt-8 border-t border-white/10">
           <p className="text-slate-400 mb-0">&copy; 2026 Car Rental System. All rights reserved.</p>
         </div>
       </div>
