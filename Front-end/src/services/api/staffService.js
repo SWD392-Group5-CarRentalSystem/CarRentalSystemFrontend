@@ -25,6 +25,11 @@ export const staffService = {
 
   // ==================== DRIVER ====================
 
+  // Create a new driver
+  createDriver: async (driverData) => {
+    return await axiosInstance.post('/auth/driver', driverData);
+  },
+
   // Get all drivers
   getAllDrivers: async (params) => {
     return await axiosInstance.get('/auth/driver', { params });

@@ -55,4 +55,26 @@ export const bookingService = {
   getBookingsByStatus: async (status) => {
     return await axiosInstance.get(`/booking/status/${status}`);
   },
+
+  // Assign a driver to a booking (staff)
+  assignDriver: async (bookingId, driverId) => {
+    return await axiosInstance.patch(`/booking/${bookingId}/assign-driver`, { driverId });
+  },
+
+  // Get all drivers with availability for a time range
+  getDriversAvailability: async (startDate, endDate) => {
+    return await axiosInstance.get('/booking/drivers-availability', {
+      params: { startDate, endDate },
+    });
+  },
+
+  // Driver accepts assigned booking
+  driverAcceptBooking: async (bookingId, driverId) => {
+    return await axiosInstance.patch(`/booking/${bookingId}/driver-accept`, { driverId });
+  },
+
+  // Driver rejects assigned booking
+  driverRejectBooking: async (bookingId, driverId, reason = '') => {
+    return await axiosInstance.patch(`/booking/${bookingId}/driver-reject`, { driverId, reason });
+  },
 };

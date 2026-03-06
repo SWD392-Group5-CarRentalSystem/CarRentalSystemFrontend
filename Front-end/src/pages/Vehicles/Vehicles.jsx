@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import PropTypes from "prop-types";
 import {
   MdSearch,
@@ -16,9 +16,28 @@ import {
   MdBolt,
   MdCreditCard,
   MdCheckCircle,
+  MdDateRange,
+  MdInfo,
 } from "react-icons/md";
 
-import { vehicleService } from "../../services/api";
+import { vehicleService, bookingService } from "../../services/api";
+
+// ── Date helpers ──────────────────────────────────────────────
+const autoFormatDate = (raw) => {
+  let d = raw.replace(/[^0-9]/g, "");
+  if (d.length > 8) d = d.slice(0, 8);
+  if (d.length > 4) return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+  if (d.length > 2) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return d;
+};
+const toISO = (dmy) => {
+  const p = (dmy || "").split("/");
+  return p.length === 3 && p[2].length === 4 ? `${p[2]}-${p[1]}-${p[0]}` : "";
+};
+const fromISO = (iso) => {
+  const p = (iso || "").split("-");
+  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
+};
 
 const CATEGORIES = ["Tất cả", "SUV", "Sedan", "Crossover", "Coupe"];
 const BRANDS = ["Tất cả", "VinFast", "Tesla", "BMW", "Audi", "Hyundai", "Kia", "Porsche", "Mercedes", "Lucid"];
@@ -31,10 +50,11 @@ const SORT_OPTIONS = [
 const VEHICLES_PER_PAGE = 9;
 
 const defaultFilters = { category: "Tất cả", brand: "Tất cả", availableOnly: false };
+const BUSY_STATUSES = ["pending", "confirmed", "vehicle_delivered", "in_progress"];
 
 // Grid Card
-const VehicleGridCard = ({ vehicle, onBookNow }) => (
-  <div className={`group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col border border-gray-100 hover:-translate-y-1 ${!vehicle.vehicleStatus ? "opacity-55" : ""}`}>
+const VehicleGridCard = ({ vehicle, onBookNow, isBusy }) => (
+  <div className={`group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col border border-gray-100 hover:-translate-y-1 ${!vehicle.vehicleStatus || isBusy ? "opacity-60" : ""}`}>
     <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
       <img
         src={vehicle.vehicleDetail.vehicleImage}
@@ -49,14 +69,21 @@ const VehicleGridCard = ({ vehicle, onBookNow }) => (
       <div className="absolute top-3 right-3 bg-emerald-500/90 backdrop-blur-sm rounded-full p-1.5 shadow-lg">
         <MdElectricCar className="text-white text-sm" />
       </div>
-      {!vehicle.vehicleStatus && (
+      {isBusy && (
+        <div className="absolute inset-0 bg-orange-900/60 flex items-center justify-center">
+          <span className="bg-orange-500/95 backdrop-blur-sm text-white font-bold px-5 py-2 rounded-full text-sm shadow-xl tracking-wide">
+            Đã được đặt
+          </span>
+        </div>
+      )}
+      {!isBusy && !vehicle.vehicleStatus && (
         <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
           <span className="bg-red-500/90 backdrop-blur-sm text-white font-bold px-5 py-2 rounded-full text-sm shadow-xl tracking-wide">
             Hết xe
           </span>
         </div>
       )}
-      {vehicle.vehicleStatus && (
+      {!isBusy && vehicle.vehicleStatus && (
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
           <button
             onClick={() => onBookNow(vehicle)}
@@ -96,11 +123,11 @@ const VehicleGridCard = ({ vehicle, onBookNow }) => (
     </div>
   </div>
 );
-VehicleGridCard.propTypes = { vehicle: PropTypes.object.isRequired, onBookNow: PropTypes.func.isRequired };
+VehicleGridCard.propTypes = { vehicle: PropTypes.object.isRequired, onBookNow: PropTypes.func.isRequired, isBusy: PropTypes.bool };
 
 // List Card
-const VehicleListCard = ({ vehicle, onBookNow }) => (
-  <div className={`group bg-white rounded-2xl border border-gray-100 hover:border-sky-200 hover:shadow-xl transition-all duration-300 overflow-hidden ${!vehicle.vehicleStatus ? "opacity-55" : ""}`}>
+const VehicleListCard = ({ vehicle, onBookNow, isBusy }) => (
+  <div className={`group bg-white rounded-2xl border transition-all duration-300 overflow-hidden ${isBusy ? "border-orange-200 opacity-60" : !vehicle.vehicleStatus ? "border-gray-100 opacity-55" : "border-gray-100 hover:border-sky-200 hover:shadow-xl"}`}>
     <div className="flex">
       <div className="relative w-52 flex-shrink-0 overflow-hidden bg-gray-100">
         <img
@@ -114,7 +141,12 @@ const VehicleListCard = ({ vehicle, onBookNow }) => (
         <span className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
           {vehicle.vehicleType}
         </span>
-        {!vehicle.vehicleStatus && (
+        {isBusy && (
+          <div className="absolute inset-0 bg-orange-900/55 flex items-center justify-center">
+            <span className="text-white font-bold text-sm">Đã đặt</span>
+          </div>
+        )}
+        {!isBusy && !vehicle.vehicleStatus && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
             <span className="text-white font-bold text-sm">Hết xe</span>
           </div>
@@ -126,11 +158,15 @@ const VehicleListCard = ({ vehicle, onBookNow }) => (
             <h3 className="font-bold text-gray-900 text-lg group-hover:text-sky-600 transition-colors">{vehicle.vehicleName}</h3>
             <p className="text-gray-400 text-sm mt-0.5">{vehicle.vehicleDetail.vehicleBrands} · {vehicle.vehicleDetail.vehicleYear}</p>
           </div>
-          {vehicle.vehicleStatus && (
+          {isBusy ? (
+            <span className="flex items-center gap-1 text-orange-600 text-xs font-semibold bg-orange-50 px-2.5 py-1 rounded-full flex-shrink-0 border border-orange-200">
+              Đã được đặt
+            </span>
+          ) : vehicle.vehicleStatus ? (
             <span className="flex items-center gap-1 text-emerald-600 text-xs font-semibold bg-emerald-50 px-2.5 py-1 rounded-full flex-shrink-0">
               <MdCheckCircle className="text-sm" /> Có sẵn
             </span>
-          )}
+          ) : null}
         </div>
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
           <div className="flex flex-wrap gap-4 text-xs text-gray-500">
@@ -142,20 +178,22 @@ const VehicleListCard = ({ vehicle, onBookNow }) => (
           <div className="flex-shrink-0 ml-4 flex items-center gap-4">
             {vehicle.price ? (
               <div className="text-right">
-                <p className="text-base font-black text-sky-600">{(vehicle.price * 1000).toLocaleString("vi-VN")}đ</p>
+                <p className={`text-base font-black ${isBusy ? "text-gray-400" : "text-sky-600"}`}>{(vehicle.price * 1000).toLocaleString("vi-VN")}đ</p>
                 <p className="text-[10px] text-gray-400 leading-none">/ngày</p>
               </div>
             ) : null}
             <button
-              onClick={() => onBookNow(vehicle)}
-              disabled={!vehicle.vehicleStatus}
-              className={`px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 cursor-pointer ${
-                vehicle.vehicleStatus
-                  ? "bg-sky-500 hover:bg-sky-400 text-white shadow-sm hover:shadow-sky-200 hover:shadow-lg"
+              onClick={() => !isBusy && onBookNow(vehicle)}
+              disabled={isBusy || !vehicle.vehicleStatus}
+              className={`px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                isBusy
+                  ? "bg-orange-100 text-orange-400 cursor-not-allowed"
+                  : vehicle.vehicleStatus
+                  ? "bg-sky-500 hover:bg-sky-400 text-white shadow-sm hover:shadow-sky-200 hover:shadow-lg cursor-pointer"
                   : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }`}
             >
-              {vehicle.vehicleStatus ? "Đặt ngay" : "Hết xe"}
+              {isBusy ? "Đã được đặt" : vehicle.vehicleStatus ? "Đặt ngay" : "Hết xe"}
             </button>
           </div>
         </div>
@@ -163,7 +201,7 @@ const VehicleListCard = ({ vehicle, onBookNow }) => (
     </div>
   </div>
 );
-VehicleListCard.propTypes = { vehicle: PropTypes.object.isRequired, onBookNow: PropTypes.func.isRequired };
+VehicleListCard.propTypes = { vehicle: PropTypes.object.isRequired, onBookNow: PropTypes.func.isRequired, isBusy: PropTypes.bool };
 
 // Filter Chip
 const FilterChip = ({ label, active, onClick }) => (
@@ -179,10 +217,68 @@ const FilterChip = ({ label, active, onClick }) => (
 FilterChip.propTypes = { label: PropTypes.string.isRequired, active: PropTypes.bool.isRequired, onClick: PropTypes.func.isRequired };
 
 // Sidebar Filter
-const SidebarFilter = ({ filters, setFilters }) => {
+const SidebarFilter = ({ filters, setFilters, dateRange, setDateRange, dateFilterLoading }) => {
   const update = (key, val) => setFilters((prev) => ({ ...prev, [key]: val }));
+  const today = new Date().toISOString().split("T")[0];
+  const startISO = toISO(dateRange.startDate);
+  const endISO = toISO(dateRange.endDate);
+  const dateError =
+    startISO && endISO && endISO <= startISO
+      ? "Ngày trả phải sau ngày nhận"
+      : startISO && startISO < today
+      ? "Ngày nhận không thể là quá khứ"
+      : "";
+
   return (
     <div className="space-y-6">
+      {/* Date range filter */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-3">
+          <MdDateRange className="text-sky-500 text-sm" />
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Lọc theo thời gian</p>
+          {dateFilterLoading && (
+            <div className="ml-auto w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
+          )}
+        </div>
+        <div className="space-y-2">
+          <div>
+            <label className="block text-[10px] text-gray-400 font-semibold mb-1">Ngày nhận xe</label>
+            <input
+              type="text"
+              placeholder="dd/mm/yyyy"
+              maxLength={10}
+              value={dateRange.startDate}
+              onChange={(e) => setDateRange((prev) => ({ ...prev, startDate: autoFormatDate(e.target.value) }))}
+              className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] text-gray-400 font-semibold mb-1">Ngày trả xe</label>
+            <input
+              type="text"
+              placeholder="dd/mm/yyyy"
+              maxLength={10}
+              value={dateRange.endDate}
+              onChange={(e) => setDateRange((prev) => ({ ...prev, endDate: autoFormatDate(e.target.value) }))}
+              className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
+            />
+          </div>
+          {dateError && (
+            <p className="flex items-center gap-1 text-[10px] text-red-500">
+              <MdInfo className="text-xs" /> {dateError}
+            </p>
+          )}
+          {(dateRange.startDate || dateRange.endDate) && (
+            <button
+              onClick={() => setDateRange({ startDate: "", endDate: "" })}
+              className="text-[11px] text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
+            >
+              Xóa bộ lọc ngày
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="h-px bg-gray-100" />
       <div>
         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Loại xe</p>
         <div className="space-y-1">
@@ -225,7 +321,7 @@ const SidebarFilter = ({ filters, setFilters }) => {
         <span className="text-sm font-medium text-gray-700">Chỉ xe có sẵn</span>
       </label>
       <button
-        onClick={() => setFilters(defaultFilters)}
+        onClick={() => { setFilters(defaultFilters); setDateRange({ startDate: "", endDate: "" }); }}
         className="w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
       >
         Xóa bộ lọc
@@ -233,11 +329,12 @@ const SidebarFilter = ({ filters, setFilters }) => {
     </div>
   );
 };
-SidebarFilter.propTypes = { filters: PropTypes.object.isRequired, setFilters: PropTypes.func.isRequired };
+SidebarFilter.propTypes = { filters: PropTypes.object.isRequired, setFilters: PropTypes.func.isRequired, dateRange: PropTypes.object.isRequired, setDateRange: PropTypes.func.isRequired, dateFilterLoading: PropTypes.bool };
 
 // Main Component
 const Vehicles = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -248,6 +345,25 @@ const Vehicles = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState(defaultFilters);
 
+  // Date-range availability filter
+  const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
+  const [busyVehicleIds, setBusyVehicleIds] = useState(null); // null = không lọc
+  const [dateFilterLoading, setDateFilterLoading] = useState(false);
+
+  // Đọc ngày từ Home search hoặc sessionStorage khi trang load
+  useEffect(() => {
+    const state = location.state;
+    const stored = sessionStorage.getItem("bookingSearchData");
+    const data = state?.startDate ? state : (stored ? (() => { try { return JSON.parse(stored); } catch { return null; } })() : null);
+    if (data?.startDate && data?.endDate) {
+      setDateRange({
+        startDate: fromISO(data.startDate),
+        endDate: fromISO(data.endDate),
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch tất cả xe
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
@@ -265,6 +381,46 @@ const Vehicles = () => {
     };
     fetchVehicles();
   }, []);
+
+  // Khi dateRange thay đổi → fetch bookings, tính xe bận
+  useEffect(() => {
+    const startISO = toISO(dateRange.startDate);
+    const endISO = toISO(dateRange.endDate);
+    const today = new Date().toISOString().split("T")[0];
+
+    if (!startISO || !endISO || endISO <= startISO || startISO < today) {
+      setBusyVehicleIds(null);
+      return;
+    }
+
+    let cancelled = false;
+    setDateFilterLoading(true);
+    bookingService.getAllBookings()
+      .then((res) => {
+        if (cancelled) return;
+        const list = Array.isArray(res) ? res : (res?.data ?? []);
+        const busyIds = new Set(
+          list
+            .filter((b) => {
+              if (!BUSY_STATUSES.includes(b.status)) return false;
+              const bStart = (b.startDate || "").split("T")[0];
+              const bEnd = (b.endDate || "").split("T")[0];
+              // Overlap: bStart < endISO && bEnd > startISO
+              return bStart < endISO && bEnd > startISO;
+            })
+            .map((b) => b.vehicleId?._id || b.vehicleId)
+        );
+        setBusyVehicleIds(busyIds);
+      })
+      .catch(() => {
+        if (!cancelled) setBusyVehicleIds(null);
+      })
+      .finally(() => {
+        if (!cancelled) setDateFilterLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [dateRange]);
 
   const filteredVehicles = useMemo(() => {
     let result = [...vehicles];
@@ -285,14 +441,31 @@ const Vehicles = () => {
       case "year_desc":  result.sort((a, b) => b.vehicleDetail.vehicleYear - a.vehicleDetail.vehicleYear); break;
       default:           result.sort((a, b) => a.vehicleName.localeCompare(b.vehicleName));
     }
+    // Xe bận (đã được đặt trong khoảng thời gian) luôn hiện cuối danh sách
+    if (busyVehicleIds !== null) {
+      result.sort((a, b) => {
+        const aBusy = busyVehicleIds.has(a._id) ? 1 : 0;
+        const bBusy = busyVehicleIds.has(b._id) ? 1 : 0;
+        return aBusy - bBusy;
+      });
+    }
     return result;
-  }, [searchQuery, filters, sortBy, vehicles]);
+  }, [searchQuery, filters, sortBy, vehicles, busyVehicleIds]);
 
-  useEffect(() => { setCurrentPage(1); }, [searchQuery, filters, sortBy]);
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, filters, sortBy, busyVehicleIds]);
 
   const totalPages = Math.ceil(filteredVehicles.length / VEHICLES_PER_PAGE);
   const pagedVehicles = filteredVehicles.slice((currentPage - 1) * VEHICLES_PER_PAGE, currentPage * VEHICLES_PER_PAGE);
-  const handleBookNow = (vehicle) => navigate("/booking", { state: { selectedVehicle: vehicle } });
+  const handleBookNow = (vehicle) => {
+    const startISO = toISO(dateRange.startDate);
+    const endISO = toISO(dateRange.endDate);
+    navigate("/booking", {
+      state: {
+        selectedVehicle: vehicle,
+        ...(startISO && endISO ? { fromSearch: true, startDate: startISO, endDate: endISO } : {}),
+      },
+    });
+  };
   const goToPage = (p) => { setCurrentPage(p); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const availableCount = vehicles.filter((v) => v.vehicleStatus).length;
 
@@ -421,6 +594,19 @@ const Vehicles = () => {
           {filters.availableOnly && (
             <FilterChip label="Có sẵn" active onClick={() => setFilters(f => ({ ...f, availableOnly: false }))} />
           )}
+          {busyVehicleIds !== null && (
+            <FilterChip
+              label={`Trống ${dateRange.startDate} – ${dateRange.endDate}`}
+              active
+              onClick={() => { setDateRange({ startDate: "", endDate: "" }); setBusyVehicleIds(null); }}
+            />
+          )}
+          {dateFilterLoading && (
+            <span className="flex items-center gap-1 text-xs text-sky-500 animate-pulse">
+              <div className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
+              Đang kiểm tra lịch...
+            </span>
+          )}
         </div>
       </div>
 
@@ -455,11 +641,14 @@ const Vehicles = () => {
             <div className="p-5 flex-1">
               <div className="flex items-center justify-between mb-5">
                 <span className="font-bold text-gray-900 text-sm">Bộ lọc</span>
-                <button onClick={() => setFilters(defaultFilters)} className="text-xs text-sky-500 hover:text-sky-600 font-medium cursor-pointer">
+                <button
+                  onClick={() => { setFilters(defaultFilters); setDateRange({ startDate: "", endDate: "" }); }}
+                  className="text-xs text-sky-500 hover:text-sky-600 font-medium cursor-pointer"
+                >
                   Xóa tất cả
                 </button>
               </div>
-              <SidebarFilter filters={filters} setFilters={setFilters} />
+              <SidebarFilter filters={filters} setFilters={setFilters} dateRange={dateRange} setDateRange={setDateRange} dateFilterLoading={dateFilterLoading} />
             </div>
           </aside>
 
@@ -475,7 +664,7 @@ const Vehicles = () => {
                   </button>
                 </div>
                 <div className="p-5 flex-1">
-                  <SidebarFilter filters={filters} setFilters={setFilters} />
+                  <SidebarFilter filters={filters} setFilters={setFilters} dateRange={dateRange} setDateRange={setDateRange} dateFilterLoading={dateFilterLoading} />
                 </div>
                 <div className="p-4 border-t border-gray-100">
                   <button onClick={() => setShowMobileFilter(false)} className="w-full py-2.5 bg-sky-500 text-white rounded-xl text-sm font-semibold hover:bg-sky-400 transition cursor-pointer">
@@ -505,13 +694,13 @@ const Vehicles = () => {
                 {viewMode === "grid" ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
                     {pagedVehicles.map((v) => (
-                      <VehicleGridCard key={v._id || v.vehicleDetail.vehicleLicensePlate} vehicle={v} onBookNow={handleBookNow} />
+                      <VehicleGridCard key={v._id || v.vehicleDetail.vehicleLicensePlate} vehicle={v} onBookNow={handleBookNow} isBusy={busyVehicleIds?.has(v._id) ?? false} />
                     ))}
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {pagedVehicles.map((v) => (
-                      <VehicleListCard key={v._id || v.vehicleDetail.vehicleLicensePlate} vehicle={v} onBookNow={handleBookNow} />
+                      <VehicleListCard key={v._id || v.vehicleDetail.vehicleLicensePlate} vehicle={v} onBookNow={handleBookNow} isBusy={busyVehicleIds?.has(v._id) ?? false} />
                     ))}
                   </div>
                 )}

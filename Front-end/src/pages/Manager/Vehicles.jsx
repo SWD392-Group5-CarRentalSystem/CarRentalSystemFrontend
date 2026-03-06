@@ -152,8 +152,10 @@ export default function Vehicles() {
                   <span className="font-semibold text-gray-700">{vehicle.vehicleType}</span>
                   {vehicle.vehicleDetail?.vehicleSeatCount ? ` • ${vehicle.vehicleDetail.vehicleSeatCount} chỗ` : ""}
                   {vehicle.vehicleDetail?.vehicleColor ? ` • ${vehicle.vehicleDetail.vehicleColor}` : ""}
-                </p>
-              </div>
+                </p>                <p className="mt-1 text-base font-bold text-blue-600">
+                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(vehicle.price) * 1000 || 0)}
+                  <span className="text-xs font-normal text-gray-400 ml-1">/ngày</span>
+                </p>              </div>
 
               {/* Actions */}
               <div className="flex gap-2">

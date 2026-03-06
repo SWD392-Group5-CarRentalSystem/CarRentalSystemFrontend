@@ -1,17 +1,25 @@
 import { useState } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Car, Calendar, Users, LogOut } from "lucide-react";
+import { useAuthContext } from "../../context/AuthContext";
 
 export default function ManagerLayout() {
-  const [breadcrumb, setBreadcrumb] = useState({ title: "Dashboard" });
+  const [breadcrumb, setBreadcrumb] = useState({ title: "Tổng quan" });
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuthContext();
 
   const menuItems = [
-    { label: "Dashboard", to: "/manager/dashboard", icon: LayoutDashboard },
-    { label: "Cars", to: "/manager/cars", icon: Car },
-    { label: "Bookings", to: "/manager/bookings", icon: Calendar },
-    { label: "Drivers", to: "/manager/drivers", icon: Users },
+    { label: "Tổng quan", to: "/manager/dashboard", icon: LayoutDashboard },
+    { label: "Quản lý xe", to: "/manager/cars", icon: Car },
+    { label: "Đơn thuê", to: "/manager/bookings", icon: Calendar },
+    { label: "Tài xế", to: "/manager/drivers", icon: Users },
   ];
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
@@ -46,9 +54,12 @@ export default function ManagerLayout() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
-          <button className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition-all">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition-all"
+          >
             <LogOut size={20} />
-            <span className="font-medium">Logout</span>
+            <span className="font-medium">Đăng xuất</span>
           </button>
         </div>
       </aside>
@@ -58,11 +69,11 @@ export default function ManagerLayout() {
         <header className="h-20 bg-white border-b flex items-center justify-between px-8 shrink-0 shadow-sm">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">{breadcrumb.title}</h2>
-            <p className="text-sm text-gray-500">Welcome back, Admin</p>
+            <p className="text-sm text-gray-500">Xin chào, {user?.username ?? "Manager"}</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
-              A
+              {user?.username?.charAt(0)?.toUpperCase() ?? "M"}
             </div>
           </div>
         </header>

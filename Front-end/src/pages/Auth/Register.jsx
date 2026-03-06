@@ -12,6 +12,8 @@ import {
   MdSmartToy,
   MdCalendarMonth,
   MdVerifiedUser,
+  MdVisibility,
+  MdVisibilityOff,
 } from "react-icons/md";
 import { authService } from "../../services/api/authService";
 
@@ -45,6 +47,8 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -55,10 +59,30 @@ const Register = () => {
     setError(""); // Clear error when user types
   };
 
+  // Auto-format DOB as dd/mm/yyyy while typing
+  const handleDOBChange = (e) => {
+    let raw = e.target.value.replace(/[^0-9]/g, ""); // digits only
+    if (raw.length > 8) raw = raw.slice(0, 8);
+    let formatted = raw;
+    if (raw.length > 4) {
+      formatted = raw.slice(0, 2) + "/" + raw.slice(2, 4) + "/" + raw.slice(4);
+    } else if (raw.length > 2) {
+      formatted = raw.slice(0, 2) + "/" + raw.slice(2);
+    }
+    setFormData((prev) => ({ ...prev, DOB: formatted }));
+    setError("");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
+
+    // Validate DOB format
+    if (formData.DOB.length !== 10) {
+      setError("Vui lòng nhập ngày sinh đúng định dạng dd/mm/yyyy");
+      return;
+    }
 
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
@@ -75,8 +99,13 @@ const Register = () => {
     setIsLoading(true);
 
     try {
+      // Convert DOB from dd/mm/yyyy → yyyy-mm-dd for BE
+      const parts = formData.DOB.split("/");
+      const isoDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : formData.DOB;
+
       // Gửi dữ liệu khớp với BE schema (không gửi confirmPassword)
-      const { confirmPassword, ...registerData } = formData;
+      const { confirmPassword, DOB: _dob, ...rest } = formData;
+      const registerData = { ...rest, DOB: isoDate };
       const response = await authService.register(registerData);
 
       console.log("Register success:", response);
@@ -202,20 +231,16 @@ const Register = () => {
                 </label>
                 <div className="relative">
                   <input
-                    type="date"
+                    type="text"
                     name="DOB"
                     value={formData.DOB}
-                    onChange={handleInputChange}
-                    className="w-full h-14 rounded-xl border border-gray-200 bg-gray-50 pl-6 pr-4 pb-1 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#13A4EC] focus:bg-white focus:ring-2 focus:ring-[#13A4EC]/20 outline-none transition-all duration-200"
+                    onChange={handleDOBChange}
+                    className="w-full h-14 rounded-xl border border-gray-200 bg-gray-50 pl-6 pr-12 pb-1 text-base text-gray-900 placeholder:text-gray-400 focus:border-[#13A4EC] focus:bg-white focus:ring-2 focus:ring-[#13A4EC]/20 outline-none transition-all duration-200"
+                    placeholder="dd/mm/yyyy"
+                    maxLength={10}
                     required
-                    max={
-                      new Date(
-                        new Date().setFullYear(new Date().getFullYear() - 18),
-                      )
-                        .toISOString()
-                        .split("T")[0]
-                    }
                   />
+                  <MdCalendarMonth className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xl" />
                 </div>
               </div>
 
@@ -226,7 +251,7 @@ const Register = () => {
                 </label>
                 <div className="relative">
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
@@ -235,7 +260,18 @@ const Register = () => {
                     required
                     minLength="6"
                   />
-                  <MdLock className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xl" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? (
+                      <MdVisibilityOff className="text-xl" />
+                    ) : (
+                      <MdVisibility className="text-xl" />
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -246,7 +282,7 @@ const Register = () => {
                 </label>
                 <div className="relative">
                   <input
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
@@ -255,7 +291,18 @@ const Register = () => {
                     required
                     minLength="6"
                   />
-                  <MdLock className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xl" />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? (
+                      <MdVisibilityOff className="text-xl" />
+                    ) : (
+                      <MdVisibility className="text-xl" />
+                    )}
+                  </button>
                 </div>
               </div>
 

@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { Calendar, Search, Eye, CheckCircle, XCircle, Clock, ChevronDown } from "lucide-react";
-import { bookingService } from "../../services/api";
+import { Calendar, Search, CheckCircle, XCircle, Clock, ChevronDown, UserCheck, X, Star, Car } from "lucide-react";
+import { bookingService, staffService } from "../../services/api";
 
 const STATUS_TRANSITIONS = {
   pending: ["confirmed", "cancelled"],
   awaiting_deposit_confirmation: ["confirmed", "cancelled"],
-  confirmed: ["vehicle_delivered", "cancelled"],
-  vehicle_delivered: ["in_progress"],
-  in_progress: ["vehicle_returned"],
-  vehicle_returned: ["completed", "deposit_lost"],
+  confirmed: ["cancelled"],          // vehicle_delivered handled by dedicated "Xuất xe" button
+  vehicle_delivered: [],              // in_progress handled by customer's "Nhận xe" button
+  in_progress: ["vehicle_returned", "deposit_lost"],   // vehicle_returned → auto đẩy lên completed
+  vehicle_returned: [],
   completed: [],
   cancelled: [],
   deposit_lost: [],
@@ -21,7 +21,7 @@ const STATUS_TEXT = {
   confirmed: "Đã xác nhận",
   vehicle_delivered: "Đã giao xe",
   in_progress: "Đang thuê",
-  vehicle_returned: "Đã trả xe",
+  vehicle_returned: "Xe đã trả → Hoàn thành",
   completed: "Hoàn thành",
   cancelled: "Đã hủy",
   deposit_lost: "Mất cọc",
@@ -35,6 +35,12 @@ export default function StaffBookings() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [updatingId, setUpdatingId] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
+
+  // Driver assignment modal state
+  const [driverModal, setDriverModal] = useState(null); // { bookingId, startDate, endDate }
+  const [drivers, setDrivers] = useState([]);
+  const [driversLoading, setDriversLoading] = useState(false);
+  const [assigningDriver, setAssigningDriver] = useState(false);
 
   useEffect(() => {
     setBreadcrumb({ title: "Quản lý đặt xe" });
@@ -79,12 +85,106 @@ export default function StaffBookings() {
       setUpdatingId(bookingId);
       setOpenDropdown(null);
       await bookingService.updateBookingStatus(bookingId, newStatus);
+      // Nếu staff đánh dấu "xe đã trả" → tự động chuyển sang hoàn thành ngay
+      if (newStatus === "vehicle_returned") {
+        await bookingService.updateBookingStatus(bookingId, "completed");
+      }
       await fetchBookings();
     } catch (error) {
       console.error("Failed to update status:", error);
       alert("Cập nhật trạng thái thất bại: " + (error?.message || "Lỗi không xác định"));
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const openDriverModal = async (booking) => {
+    setDriverModal({ bookingId: booking._id, startDate: booking.startDate, endDate: booking.endDate });
+    setDrivers([]);
+    setDriversLoading(true);
+
+    const start = new Date(booking.startDate);
+    const end   = new Date(booking.endDate);
+
+    // Helper: tính isBusy cho từng driver dựa vào bookings đã load
+    const computeBusy = (allDrivers) => {
+      const busyIds = new Set(
+        bookings
+          .filter((b) =>
+            b._id !== booking._id &&
+            b.driverId &&
+            !["cancelled", "completed", "deposit_lost"].includes(b.status) &&
+            new Date(b.startDate) < end &&
+            new Date(b.endDate) > start
+          )
+          .map((b) => String(b.driverId?._id ?? b.driverId))
+      );
+      return allDrivers.map((d) => ({ ...d, isBusy: busyIds.has(String(d._id)) }));
+    };
+
+    try {
+      // --- Thử endpoint availability trước ---
+      const res = await bookingService.getDriversAvailability(
+        new Date(booking.startDate).toISOString(),
+        new Date(booking.endDate).toISOString(),
+      );
+      console.log("[DriverModal] availability response:", res);
+
+      // Interceptor trả về response.data nên res = { success, data: [...] }
+      const list = Array.isArray(res?.data) ? res.data
+                 : Array.isArray(res)       ? res
+                 : [];
+
+      console.log("[DriverModal] drivers from availability:", list.length, list);
+
+      if (list.length > 0) {
+        setDrivers(list);
+        setDriversLoading(false);
+        return;
+      }
+
+      // Nếu availability trả về rỗng → fallback getAllDrivers
+      console.warn("[DriverModal] availability returned empty, falling back to getAllDrivers");
+    } catch (err) {
+      console.warn("[DriverModal] availability endpoint failed:", err);
+    }
+
+    // --- Fallback: getAllDrivers ---
+    try {
+      const drRes = await staffService.getAllDrivers();
+      console.log("[DriverModal] getAllDrivers response:", drRes);
+
+      const allDrivers = Array.isArray(drRes?.data) ? drRes.data
+                       : Array.isArray(drRes)        ? drRes
+                       : [];
+
+      console.log("[DriverModal] allDrivers count:", allDrivers.length, allDrivers);
+      setDrivers(computeBusy(allDrivers));
+    } catch (err2) {
+      console.error("[DriverModal] getAllDrivers failed:", err2);
+      alert("Không tải được danh sách tài xế. Vui lòng kiểm tra console.");
+    } finally {
+      setDriversLoading(false);
+    }
+  };
+
+  const closeDriverModal = () => {
+    setDriverModal(null);
+    setDrivers([]);
+  };
+
+  const handleAssignDriver = async (driverId) => {
+    if (!driverModal) return;
+    try {
+      setAssigningDriver(true);
+      await bookingService.assignDriver(driverModal.bookingId, driverId);
+      await fetchBookings();
+      closeDriverModal();
+    } catch (error) {
+      console.error("Failed to assign driver:", error);
+      alert("Chỉ định tài xế thất bại: " + (error?.response?.data?.message || error?.message || "Lỗi không xác định"));
+    } finally {
+      setAssigningDriver(false);
     }
   };
 
@@ -265,6 +365,57 @@ export default function StaffBookings() {
                     {/* Actions */}
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-2">
+                            {/* Xuất xe button — only for confirmed bookings */}
+                        {booking.status === "confirmed" && (
+                          <button
+                            onClick={() => handleUpdateStatus(booking._id, "vehicle_delivered")}
+                            disabled={isUpdating}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Car size={14} />
+                            {isUpdating ? "Đang xử lý..." : "Xuất xe"}
+                          </button>
+                        )}
+
+                        {/* Assign driver — with_driver bookings not finished */}
+                        {booking.rentalType === "with_driver" &&
+                          !["cancelled", "completed", "deposit_lost"].includes(booking.status) && (
+                            <div className="flex flex-col gap-1">
+                              {/* driverStatus badge */}
+                              {booking.driverId && (
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border w-fit ${
+                                    booking.driverStatus === "accepted"
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                      : booking.driverStatus === "rejected"
+                                      ? "bg-red-50 text-red-600 border-red-200"
+                                      : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                  }`}
+                                >
+                                  {booking.driverStatus === "accepted"
+                                    ? "✔ Tài xế đã nhận"
+                                    : booking.driverStatus === "rejected"
+                                    ? "✖ Tài xế từ chối"
+                                    : "⏳ Chờ tài xế xác nhận"}
+                                </span>
+                              )}
+                              <button
+                                onClick={() => openDriverModal(booking)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                                  booking.driverStatus === "rejected"
+                                    ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                                    : "bg-violet-50 text-violet-600 border-violet-200 hover:bg-violet-100"
+                                }`}
+                              >
+                                <UserCheck size={14} />
+                                {!booking.driverId
+                                  ? "Chỉ định tài xế"
+                                  : booking.driverStatus === "rejected"
+                                  ? "Phân công lại"
+                                  : `Tài xế: ${booking.driverId?.username ?? "Đổi tài xế"}`}
+                              </button>
+                            </div>
+                          )}
                         {/* Confirm deposit button for awaiting_deposit_confirmation */}
                         {booking.status === "awaiting_deposit_confirmation" && (
                           <button
@@ -332,6 +483,99 @@ export default function StaffBookings() {
           </div>
         )}
       </div>
+
+      {/* Driver Assignment Modal */}
+      {driverModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <UserCheck size={20} className="text-violet-600" />
+                <h2 className="text-lg font-bold text-gray-800">Chỉ định tài xế</h2>
+              </div>
+              <button
+                onClick={closeDriverModal}
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <X size={18} className="text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto flex-1 px-6 py-4">
+              {driversLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="w-10 h-10 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+                  <p className="mt-3 text-gray-500 text-sm">Đang tải danh sách tài xế...</p>
+                </div>
+              ) : drivers.length === 0 ? (
+                <p className="text-center text-gray-500 py-8 text-sm">Không có tài xế nào</p>
+              ) : (
+                <ul className="space-y-2">
+                  {drivers.map((driver) => (
+                    <li key={driver._id}>
+                      <button
+                        disabled={driver.isBusy || assigningDriver}
+                        onClick={() => handleAssignDriver(driver._id)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all
+                          ${driver.isBusy
+                            ? "bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed"
+                            : "bg-white border-gray-200 hover:border-violet-400 hover:bg-violet-50 cursor-pointer"
+                          }`}
+                      >
+                        {/* Avatar */}
+                        <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center shrink-0 overflow-hidden">
+                          {driver.avatar ? (
+                            <img src={driver.avatar} alt={driver.username} className="w-full h-full object-cover rounded-full" />
+                          ) : (
+                            <span className="text-violet-600 font-bold text-sm">
+                              {driver.username?.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-800 text-sm truncate">{driver.username}</p>
+                          <p className="text-xs text-gray-500">{driver.phoneNumber}</p>
+                          {driver.Rating > 0 && (
+                            <span className="inline-flex items-center gap-0.5 text-xs text-amber-600 font-medium">
+                              <Star size={11} className="fill-amber-400 text-amber-400" />
+                              {Number(driver.Rating).toFixed(1)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Status badge */}
+                        {driver.isBusy ? (
+                          <span className="shrink-0 px-2 py-1 rounded-lg bg-red-100 text-red-600 text-xs font-semibold">
+                            Đã có lịch
+                          </span>
+                        ) : (
+                          <span className="shrink-0 px-2 py-1 rounded-lg bg-green-100 text-green-600 text-xs font-semibold">
+                            Rảnh
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-gray-100">
+              <button
+                onClick={closeDriverModal}
+                className="w-full py-2 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

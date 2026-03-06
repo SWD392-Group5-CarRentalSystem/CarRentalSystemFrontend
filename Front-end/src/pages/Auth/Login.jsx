@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FcGoogle } from 'react-icons/fc';
 import { FaFacebook } from 'react-icons/fa';
 import { MdEmail, MdLock, MdArrowForward, MdElectricCar, MdSmartToy, MdCalendarMonth, MdVerifiedUser } from 'react-icons/md';
+import { useAuthContext } from '../../context';
 
 import loginBackground from '../../assets/images/login.png';
 
@@ -20,27 +21,47 @@ const FeatureCard = ({ icon: Icon, label, value }) => (
 );
 
 const Login = () => {
+  const navigate = useNavigate();
+  const { login } = useAuthContext();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    setError('');
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
   };
 
+  const getRoleRedirect = (role) => {
+    if (role === 'manager') return '/manager/dashboard';
+    if (role === 'staff') return '/staff/dashboard';
+    if (role === 'driver') return '/driver/dashboard';
+    return '/';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsLoading(false);
-    console.log('Login data:', formData);
+    setError('');
+    try {
+      const result = await login(formData);
+      if (result.success) {
+        navigate(getRoleRedirect(result.user?.role));
+      } else {
+        setError(result.error || 'Email hoặc mật khẩu không đúng');
+      }
+    } catch (err) {
+      setError('Đã xảy ra lỗi. Vui lòng thử lại.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -128,6 +149,13 @@ const Login = () => {
                   <MdLock className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xl" />
                 </div>
               </div>
+
+              {/* Error message */}
+              {error && (
+                <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm font-medium">
+                  {error}
+                </div>
+              )}
 
               {/* Submit Button */}
               <button

@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import { MainLayout, ManagerLayout, StaffLayout } from "../components/layout";
+import { MainLayout, ManagerLayout, StaffLayout, DriverLayout } from "../components/layout";
 import Home from "../pages/Home";
 import { Login, Register } from "../pages/Auth";
 import { Booking } from "../pages/Booking";
@@ -9,8 +9,10 @@ import { Profile } from "../pages/Profile";
 import { Vehicles } from "../pages/Vehicles";
 import { Dashboard, Vehicles as ManagerVehicles, Bookings, Drivers } from "../pages/Manager";
 import { StaffDashboard, StaffBookings } from "../pages/Staff";
+import { DriverDashboard, DriverSchedule } from "../pages/Driver";
 import { PaymentResult } from "../pages/Payment";
-import { ManagerRoute, StaffRoute } from "./RoleBasedRoute";
+import About from "../pages/About/About";
+import { ManagerRoute, StaffRoute, DriverRoute } from "./RoleBasedRoute";
 import ProtectedAuthRoute from "./ProtectedAuthRoute";
 
 // Lazy load pages for better performance
@@ -28,6 +30,7 @@ const AppRoutes = () => {
           <Route path="history" element={<History />} />
           <Route path="profile" element={<Profile />} />
           <Route path="payment/result" element={<PaymentResult />} />
+          <Route path="about" element={<About />} />
           {/* Add more routes here */}
         </Route>
 
@@ -58,6 +61,19 @@ const AppRoutes = () => {
           <Route path="dashboard" element={<StaffDashboard />} />
           <Route path="bookings" element={<StaffBookings />} />
           {/* Additional staff routes can be added here */}
+        </Route>
+
+        {/* Driver Routes - Protected */}
+        <Route
+          path="/driver"
+          element={
+            <DriverRoute>
+              <DriverLayout />
+            </DriverRoute>
+          }
+        >
+          <Route path="dashboard" element={<DriverDashboard />} />
+          <Route path="schedule" element={<DriverSchedule />} />
         </Route>
 
         <Route path="/login" element={

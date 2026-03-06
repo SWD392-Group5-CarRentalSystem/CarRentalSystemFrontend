@@ -17,6 +17,21 @@ import {
 import heroBackground from "../../assets/videos/HomeVideo.mp4";
 import { vehicleService } from "../../services/api";
 
+const POPULAR_LOCATIONS = [
+  "Sân bay Tân Sơn Nhất, TP.HCM",
+  "Sân bay Nội Bài, Hà Nội",
+  "Sân bay Đà Nẵng",
+  "Ga Sài Gòn, TP.HCM",
+  "Ga Hà Nội",
+  "Trung tâm Q.1, TP.HCM",
+  "Trung tâm Hoàn Kiếm, Hà Nội",
+  "Bãi biển Mỹ Khê, Đà Nẵng",
+  "Vũng Tàu",
+  "Đà Lạt",
+  "Nha Trang",
+  "Hội An",
+];
+
 const filterTabs = ["Tất cả", "SUV", "Sedan", "Crossover", "Coupe"];
 
 // Car Card Component with stagger animations
@@ -156,6 +171,69 @@ const Home = () => {
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Search form state
+  const [searchForm, setSearchForm] = useState({
+    pickupLocation: "",
+    dropoffLocation: "",
+    startDate: "",
+    endDate: "",
+  });
+  const [searchErrors, setSearchErrors] = useState({});
+  const [showPickupSug, setShowPickupSug] = useState(false);
+  const [showDropoffSug, setShowDropoffSug] = useState(false);
+
+  const filteredPickupLocs = POPULAR_LOCATIONS.filter((l) =>
+    !searchForm.pickupLocation.trim() ||
+    l.toLowerCase().includes(searchForm.pickupLocation.toLowerCase())
+  );
+  const filteredDropoffLocs = POPULAR_LOCATIONS.filter((l) =>
+    !searchForm.dropoffLocation.trim() ||
+    l.toLowerCase().includes(searchForm.dropoffLocation.toLowerCase())
+  );
+
+  const updateSearch = (field, value) => {
+    setSearchForm((prev) => ({ ...prev, [field]: value }));
+    setSearchErrors((prev) => ({ ...prev, [field]: "" }));
+  };
+
+  const today = new Date().toISOString().split("T")[0];
+
+  // dd/mm/yyyy helpers
+  const autoFormatDate = (raw) => {
+    let d = raw.replace(/[^0-9]/g, "");
+    if (d.length > 8) d = d.slice(0, 8);
+    if (d.length > 4) return `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}`;
+    if (d.length > 2) return `${d.slice(0,2)}/${d.slice(2)}`;
+    return d;
+  };
+  const toISO = (dmy) => {
+    const p = (dmy || "").split("/");
+    return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : dmy;
+  };
+
+  const handleSearch = () => {
+    const errs = {};
+    if (!searchForm.pickupLocation.trim()) errs.pickupLocation = "Vui lòng nhập điểm đón";
+    if (!searchForm.startDate || searchForm.startDate.length < 10) errs.startDate = "Chọn ngày nhận xe (dd/mm/yyyy)";
+    else if (toISO(searchForm.startDate) < today) errs.startDate = "Ngày nhận không thể là quá khứ";
+    if (!searchForm.endDate || searchForm.endDate.length < 10) errs.endDate = "Chọn ngày trả xe (dd/mm/yyyy)";
+    if (searchForm.startDate && searchForm.endDate && searchForm.startDate.length === 10 && searchForm.endDate.length === 10 && toISO(searchForm.endDate) <= toISO(searchForm.startDate))
+      errs.endDate = "Ngày trả phải sau ngày nhận";
+    if (Object.keys(errs).length) { setSearchErrors(errs); return; }
+
+    const searchData = {
+      fromSearch: true,
+      rentalType: driveMode === "driver" ? "with_driver" : "self_drive",
+      pickupLocation: searchForm.pickupLocation,
+      dropoffLocation: searchForm.dropoffLocation || searchForm.pickupLocation,
+      startDate: toISO(searchForm.startDate),
+      endDate: toISO(searchForm.endDate),
+    };
+    // Persist so Booking page can read even after /vehicles detour
+    sessionStorage.setItem("bookingSearchData", JSON.stringify(searchData));
+    navigate("/vehicles", { state: searchData });
+  };
+
   useEffect(() => {
     vehicleService.getAllVehicles()
       .then((res) => {
@@ -201,10 +279,10 @@ const Home = () => {
             </div>
             <div>
               <p className="text-xs font-medium leading-tight text-gray-800">
-                Need help choosing the right EV?
+                Cần tư vấn chọn xe điện phù hợp?
               </p>
               <button className="text-sky-500 text-[10px] font-bold mt-1 uppercase tracking-wider hover:underline">
-                Chat with AI
+                Chat với AI
               </button>
             </div>
           </div>
@@ -317,22 +395,44 @@ const Home = () => {
             {/* Form Fields */}
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
               {/* Pickup Location */}
-              <div>
+              <div className="relative">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
                   Điểm đón
                 </label>
-                <div className="flex items-center gap-2 bg-gray-50/80 border border-gray-200 rounded-xl px-3 py-2.5 group focus-within:border-sky-500 focus-within:bg-white transition-all">
+                <div className={`flex items-center gap-2 bg-gray-50/80 border rounded-xl px-3 py-2.5 group focus-within:bg-white transition-all ${searchErrors.pickupLocation ? "border-red-400 bg-red-50/30" : "border-gray-200 focus-within:border-sky-500"}`}>
                   <MdLocationOn className="text-gray-400 text-lg group-focus-within:text-sky-500 shrink-0" />
                   <input
                     className="bg-transparent border-none p-0 focus:ring-0 w-full text-sm font-medium placeholder:text-gray-400 outline-none"
                     placeholder="Thành phố hoặc sân bay"
                     type="text"
+                    value={searchForm.pickupLocation}
+                    onChange={(e) => updateSearch("pickupLocation", e.target.value)}
+                    onFocus={() => setShowPickupSug(true)}
+                    onBlur={() => setTimeout(() => setShowPickupSug(false), 150)}
                   />
                 </div>
+                {searchErrors.pickupLocation && (
+                  <p className="text-red-500 text-[10px] mt-1 font-medium">{searchErrors.pickupLocation}</p>
+                )}
+                {showPickupSug && filteredPickupLocs.length > 0 && (
+                  <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-52 overflow-y-auto">
+                    {filteredPickupLocs.map((loc) => (
+                      <button
+                        key={loc}
+                        type="button"
+                        onMouseDown={() => { updateSearch("pickupLocation", loc); setShowPickupSug(false); }}
+                        className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-sky-50 hover:text-sky-600 flex items-center gap-2 transition-colors"
+                      >
+                        <MdLocationOn className="text-sky-400 shrink-0 text-base" />
+                        {loc}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Drop-off Location */}
-              <div>
+              <div className="relative">
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
                   Điểm trả
                 </label>
@@ -342,8 +442,27 @@ const Home = () => {
                     className="bg-transparent border-none p-0 focus:ring-0 w-full text-sm font-medium placeholder:text-gray-400 outline-none"
                     placeholder="Giống điểm đón"
                     type="text"
+                    value={searchForm.dropoffLocation}
+                    onChange={(e) => updateSearch("dropoffLocation", e.target.value)}
+                    onFocus={() => setShowDropoffSug(true)}
+                    onBlur={() => setTimeout(() => setShowDropoffSug(false), 150)}
                   />
                 </div>
+                {showDropoffSug && filteredDropoffLocs.length > 0 && (
+                  <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-52 overflow-y-auto">
+                    {filteredDropoffLocs.map((loc) => (
+                      <button
+                        key={loc}
+                        type="button"
+                        onMouseDown={() => { updateSearch("dropoffLocation", loc); setShowDropoffSug(false); }}
+                        className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-sky-50 hover:text-sky-600 flex items-center gap-2 transition-colors"
+                      >
+                        <MdLocationOn className="text-sky-400 shrink-0 text-base" />
+                        {loc}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Pickup Date */}
@@ -351,13 +470,20 @@ const Home = () => {
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
                   Ngày nhận xe
                 </label>
-                <div className="flex items-center gap-2 bg-gray-50/80 border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-sky-500 focus-within:bg-white transition-all">
+                <div className={`flex items-center gap-2 bg-gray-50/80 border rounded-xl px-3 py-2.5 focus-within:bg-white transition-all ${searchErrors.startDate ? "border-red-400 bg-red-50/30" : "border-gray-200 focus-within:border-sky-500"}`}>
                   <MdCalendarToday className="text-gray-400 text-base shrink-0" />
                   <input
                     className="bg-transparent border-none p-0 focus:ring-0 w-full text-sm font-medium outline-none"
-                    type="date"
+                    type="text"
+                    placeholder="dd/mm/yyyy"
+                    maxLength={10}
+                    value={searchForm.startDate}
+                    onChange={(e) => updateSearch("startDate", autoFormatDate(e.target.value))}
                   />
                 </div>
+                {searchErrors.startDate && (
+                  <p className="text-red-500 text-[10px] mt-1 font-medium">{searchErrors.startDate}</p>
+                )}
               </div>
 
               {/* Return Date */}
@@ -365,18 +491,28 @@ const Home = () => {
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
                   Ngày trả xe
                 </label>
-                <div className="flex items-center gap-2 bg-gray-50/80 border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-sky-500 focus-within:bg-white transition-all">
+                <div className={`flex items-center gap-2 bg-gray-50/80 border rounded-xl px-3 py-2.5 focus-within:bg-white transition-all ${searchErrors.endDate ? "border-red-400 bg-red-50/30" : "border-gray-200 focus-within:border-sky-500"}`}>
                   <MdCalendarToday className="text-gray-400 text-base shrink-0" />
                   <input
                     className="bg-transparent border-none p-0 focus:ring-0 w-full text-sm font-medium outline-none"
-                    type="date"
+                    type="text"
+                    placeholder="dd/mm/yyyy"
+                    maxLength={10}
+                    value={searchForm.endDate}
+                    onChange={(e) => updateSearch("endDate", autoFormatDate(e.target.value))}
                   />
                 </div>
+                {searchErrors.endDate && (
+                  <p className="text-red-500 text-[10px] mt-1 font-medium">{searchErrors.endDate}</p>
+                )}
               </div>
             </div>
 
             {/* Search Button */}
-            <button className="shrink-0 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white py-3 px-8 rounded-xl font-bold text-sm uppercase tracking-wider transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-sky-500/30 flex items-center justify-center gap-2 group">
+            <button
+              onClick={handleSearch}
+              className="shrink-0 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white py-3 px-8 rounded-xl font-bold text-sm uppercase tracking-wider transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-sky-500/30 flex items-center justify-center gap-2 group"
+            >
               <span>Tìm xe</span>
               <MdDirectionsCar className="text-lg group-hover:translate-x-1 transition-transform" />
             </button>
