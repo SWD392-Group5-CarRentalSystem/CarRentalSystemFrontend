@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { Calendar, Search, Filter, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Calendar, Search, CheckCircle, XCircle, Clock } from "lucide-react";
 import { bookingService } from "../../services/api";
 
 export default function Bookings() {
@@ -151,7 +151,6 @@ export default function Bookings() {
                 <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Thời gian</th>
                 <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Tổng tiền</th>
                 <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Trạng thái</th>
-                <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -185,12 +184,6 @@ export default function Bookings() {
                       {getStatusIcon(booking.status)}
                       {getStatusText(booking.status)}
                     </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors">
-                      <Eye size={16} />
-                      <span className="text-sm font-medium">Chi tiết</span>
-                    </button>
                   </td>
                 </tr>
               ))}

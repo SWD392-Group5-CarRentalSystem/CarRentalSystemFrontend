@@ -16,7 +16,7 @@ import {
 const Header = () => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const { user, isAuthenticated, logout, isManager, isStaffOrAbove } = useAuthContext();
+  const { user, isAuthenticated, logout, isManager, isStaffOrAbove, isDriver } = useAuthContext();
 
   const handleLogout = () => {
     logout();
@@ -41,16 +41,6 @@ const Header = () => {
           <nav className="hidden md:flex items-center gap-10">
             <Link
               to="/vehicles"
-              className="group relative px-1 py-2 text-base font-semibold text-white/90 hover:text-white transition-all duration-300 tracking-wide"
-            >
-              <span className="relative z-10">Xe của chúng tôi</span>
-              {/* Animated underline */}
-              <span className="absolute bottom-0 left-0 w-0 h-[3px] bg-gradient-to-r from-emerald-400 to-green-500 group-hover:w-full transition-all duration-300 ease-out rounded-full"></span>
-              {/* Glow effect */}
-              <span className="absolute bottom-0 left-0 w-0 h-[3px] bg-gradient-to-r from-emerald-400 to-green-500 blur-sm group-hover:w-full transition-all duration-300 ease-out"></span>
-            </Link>
-            <Link
-              to="/booking"
               className="group relative px-1 py-2 text-base font-semibold text-white/90 hover:text-white transition-all duration-300 tracking-wide"
             >
               <span className="relative z-10">Đặt xe</span>
@@ -91,6 +81,18 @@ const Header = () => {
                 <span className="relative z-10">Nhân viên</span>
                 <span className="absolute bottom-0 left-0 w-0 h-[3px] bg-gradient-to-r from-indigo-400 to-purple-500 group-hover:w-full transition-all duration-300 ease-out rounded-full"></span>
                 <span className="absolute bottom-0 left-0 w-0 h-[3px] bg-gradient-to-r from-indigo-400 to-purple-500 blur-sm group-hover:w-full transition-all duration-300 ease-out"></span>
+              </Link>
+            )}
+
+            {/* Driver Navigation */}
+            {isDriver() && (
+              <Link
+                to="/driver/dashboard"
+                className="group relative px-1 py-2 text-base font-semibold text-white/90 hover:text-white transition-all duration-300 tracking-wide"
+              >
+                <span className="relative z-10">Tài xế</span>
+                <span className="absolute bottom-0 left-0 w-0 h-[3px] bg-gradient-to-r from-green-400 to-emerald-500 group-hover:w-full transition-all duration-300 ease-out rounded-full"></span>
+                <span className="absolute bottom-0 left-0 w-0 h-[3px] bg-gradient-to-r from-green-400 to-emerald-500 blur-sm group-hover:w-full transition-all duration-300 ease-out"></span>
               </Link>
             )}
             
@@ -215,7 +217,7 @@ const Header = () => {
           <div className="md:hidden py-4 border-t border-white/10 animate-fade-in">
             <nav className="flex flex-col gap-1">
               <Link
-                to="/booking"
+                to="/vehicles"
                 className="group flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-medium text-white/90 hover:bg-gradient-to-r hover:from-sky-500/20 hover:to-blue-500/20 transition-all duration-300"
                 onClick={() => setShowMobileMenu(false)}
               >

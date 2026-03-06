@@ -22,6 +22,11 @@ import {
   MdKeyboardArrowDown,
   MdKeyboardArrowUp,
   MdClose,
+  MdPhone,
+  MdPersonPin,
+  MdPayment,
+  MdAccountBalanceWallet,
+  MdReceipt,
 } from "react-icons/md";
 
 // Map BE status (9 loại) → 4 nhóm hiển thị
@@ -57,6 +62,14 @@ const normalizeBooking = (b) => ({
   status: b.status,
   displayStatus: STATUS_GROUP[b.status] ?? "pending",
   rentalType: b.rentalType,
+  // driver populated từ BE (username, phoneNumber)
+  driver: b.driverId && typeof b.driverId === "object"
+    ? { name: b.driverId.username ?? "", phone: b.driverId.phoneNumber ?? "" }
+    : null,
+  driverStatus: b.driverStatus ?? null,
+  depositStatus: b.depositStatus ?? "not_paid",
+  depositTransferredAt: b.depositTransferredAt ?? null,
+  depositConfirmedAt: b.depositConfirmedAt ?? null,
   rating: null,
 });
 
@@ -72,6 +85,12 @@ const filterOptions = [
 
 // Status Badge Component — map toàn bộ BE status
 const STATUS_BADGE_CONFIG = {
+  awaiting_driver: {
+    icon: MdPending,
+    text: "Chờ phân tài xế",
+    bgColor: "bg-purple-100",
+    textColor: "text-purple-600",
+  },
   pending: {
     icon: MdPending,
     text: "Chờ xác nhận",
@@ -184,9 +203,34 @@ StarRating.propTypes = {
 };
 
 // History Card Component
-const HistoryCard = ({ booking, index, onViewDetails }) => {
+const HistoryCard = ({ booking, index, onViewDetails, onConfirmReceive }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
+  // Tính trạng thái hiển thị thực tế:
+  // with_driver + confirmed + chưa có tài xế → "awaiting_driver"
+  const isWithDriver = booking.rentalType === "with_driver";
+  const effectiveStatus =
+    booking.status === "confirmed" && isWithDriver && !booking.driver
+      ? "awaiting_driver"
+      : booking.status;
+
+  // Driver display logic dựa trên driverStatus
+  const driverAccepted = isWithDriver && booking.driver && booking.driverStatus === "accepted";
+  const driverPending  = isWithDriver && booking.driver && (!booking.driverStatus || booking.driverStatus === "pending_driver");
+  const driverRejected = isWithDriver && !booking.driver && booking.driverStatus === "rejected";
+
+  const handleConfirmReceive = async () => {
+    if (confirming) return;
+    if (!window.confirm("Xác nhận bạn đã nhận được xe?")) return;
+    try {
+      setConfirming(true);
+      await onConfirmReceive(booking._id ?? booking.id);
+    } finally {
+      setConfirming(false);
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), index * 100);
@@ -239,8 +283,58 @@ const HistoryCard = ({ booking, index, onViewDetails }) => {
                   {booking.vehicle.type}
                 </p>
               </div>
-              <StatusBadge status={booking.status} />
+              <StatusBadge status={effectiveStatus} />
             </div>
+
+            {/* Thông tin tài xế — chỉ hiển thị khi driver ĐÃ ACCEPTED */}
+            {driverAccepted && ![
+              "cancelled", "completed", "deposit_lost"
+            ].includes(booking.status) && (
+              <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-4 flex items-center gap-4">
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
+                  <MdPersonPin className="text-purple-500 text-2xl" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-purple-500 font-semibold uppercase tracking-wide mb-0.5">Tài xế của bạn</p>
+                  <p className="text-sm font-bold text-purple-800 truncate">{booking.driver.name}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <MdPhone className="text-purple-400 text-sm shrink-0" />
+                    <p className="text-sm text-purple-600 font-medium">{booking.driver.phone || "Chưa có SĐT"}</p>
+                  </div>
+                </div>
+                <span className="shrink-0 px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">✔ Đã xác nhận</span>
+              </div>
+            )}
+
+            {/* Chờ tài xế xác nhận */}
+            {driverPending && ![
+              "cancelled", "completed", "deposit_lost"
+            ].includes(booking.status) && (
+              <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-center gap-3">
+                <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center shrink-0">
+                  <MdPending className="text-yellow-500 text-xl" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-yellow-800">Đang chờ tài xế xác nhận</p>
+                  <p className="text-xs text-yellow-600 mt-0.5">Tài xế <span className="font-bold">{booking.driver.name}</span> đã được phân công, chờ phản hồi...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Tài xế từ chối — chờ phân lại */}
+            {driverRejected && ![
+              "cancelled", "completed", "deposit_lost"
+            ].includes(booking.status) && (
+              <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+                  <MdCancel className="text-red-500 text-xl" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-red-700">Tài xế từ chối nhận lịch</p>
+                  <p className="text-xs text-red-500 mt-0.5">Nhân viên đang tìm tài xế khác cho bạn, vui lòng chờ...</p>
+                </div>
+              </div>
+            )}
 
             <div className="grid sm:grid-cols-2 gap-4 mb-4">
               <div className="flex items-start gap-3">
@@ -310,6 +404,29 @@ const HistoryCard = ({ booking, index, onViewDetails }) => {
               </div>
             </div>
 
+            {/* Nhận xe banner */}
+            {booking.status === "vehicle_delivered" && (
+              <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+                    <MdDirectionsCar className="text-blue-500 text-xl" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-blue-700">Xe đã được xuất — nhấn xác nhận khi bạn đã nhận xe!</p>
+                    <p className="text-xs text-blue-500 mt-0.5">Nhân viên đã giao xe cho bạn, hãy xác nhận để bắt đầu chuyến đi.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleConfirmReceive}
+                  disabled={confirming}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
+                >
+                  <MdCheckCircle className="text-lg" />
+                  {confirming ? "Đang xử lý..." : "Đã nhận xe"}
+                </button>
+              </div>
+            )}
+
             {/* Footer */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4 pt-4 border-t border-gray-100">
               <div className="flex items-center gap-4">
@@ -365,10 +482,17 @@ HistoryCard.propTypes = {
     returnLocation: PropTypes.string.isRequired,
     totalPrice: PropTypes.number.isRequired,
     status: PropTypes.string.isRequired,
+    rentalType: PropTypes.string,
+    driver: PropTypes.shape({
+      name: PropTypes.string,
+      phone: PropTypes.string,
+    }),
+    driverStatus: PropTypes.string,
     rating: PropTypes.number,
   }).isRequired,
   index: PropTypes.number.isRequired,
   onViewDetails: PropTypes.func,
+  onConfirmReceive: PropTypes.func,
 };
 
 // Empty State Component
@@ -400,9 +524,7 @@ const EmptyState = () => (
 // Stats Summary Component
 const StatsSummary = ({ bookings }) => {
   const completedTrips = bookings.filter((b) => b.status === "completed").length;
-  const activeTrips = bookings.filter((b) =>
-    ["confirmed", "vehicle_delivered", "in_progress", "vehicle_returned"].includes(b.status)
-  ).length;
+  const activeTrips = bookings.filter((b) => b.displayStatus === "ongoing").length;
   const totalSpent = bookings
     .filter((b) => b.status === "completed")
     .reduce((acc, b) => acc + b.totalPrice, 0);
@@ -440,6 +562,100 @@ StatsSummary.propTypes = {
   bookings: PropTypes.array.isRequired,
 };
 
+// ===================== DEPOSIT STATUS CONFIG =====================
+const DEPOSIT_STATUS_CONFIG = {
+  not_paid:             { text: "Chưa thanh toán", bg: "bg-gray-100",    color: "text-gray-600"    },
+  pending_confirmation: { text: "Chờ xác nhận",   bg: "bg-orange-100",  color: "text-orange-600"  },
+  confirmed:            { text: "Đã xác nhận",    bg: "bg-emerald-100", color: "text-emerald-600" },
+  refunded:             { text: "Đã hoàn cọc",     bg: "bg-sky-100",     color: "text-sky-600"     },
+  lost:                 { text: "Mất cọc",         bg: "bg-red-100",     color: "text-red-600"     },
+};
+
+// ===================== PAYMENT CARD =====================
+const PaymentCard = ({ booking, index }) => {
+  const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n);
+  const fmtDate = (ts) =>
+    ts ? new Date(ts).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
+  const fmtTime = (ts) =>
+    ts ? new Date(ts).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : "";
+
+  const depositCfg = DEPOSIT_STATUS_CONFIG[booking.depositStatus] ?? DEPOSIT_STATUS_CONFIG.not_paid;
+
+  return (
+    <div
+      className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden animate-slide-up border border-gray-100"
+      style={{ animationDelay: `${index * 60}ms` }}
+    >
+      <div className="flex flex-col sm:flex-row">
+        {/* Vehicle image */}
+        <div className="sm:w-36 h-32 sm:h-auto shrink-0 overflow-hidden bg-linear-to-br from-sky-50 to-indigo-100">
+          <img
+            src={booking.vehicle.image}
+            alt={booking.vehicle.name}
+            className="w-full h-full object-cover"
+            onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=400"; }}
+          />
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 p-5 flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <h3 className="font-bold text-gray-900 text-base">{booking.vehicle.name}</h3>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Mã đặt xe: <span className="font-mono">{booking._id?.slice(-8).toUpperCase()}</span>
+              </p>
+            </div>
+            {/* Deposit status badge */}
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${depositCfg.bg} ${depositCfg.color}`}>
+              <MdPayment className="text-sm" />
+              {depositCfg.text}
+            </span>
+          </div>
+
+          {/* Payment details grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Ngày thanh toán</span>
+              <span className="text-sm font-semibold text-gray-800">{fmtDate(booking.depositTransferredAt)}</span>
+              {booking.depositTransferredAt && (
+                <span className="text-xs text-gray-400">{fmtTime(booking.depositTransferredAt)}</span>
+              )}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Tiền cọc</span>
+              <span className="text-sm font-bold text-sky-600">{fmt(booking.depositAmount)} ₫</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Tổng tiền thuê</span>
+              <span className="text-sm font-bold text-gray-900">{fmt(booking.totalPrice)} ₫</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Thời gian thuê</span>
+              <span className="text-sm text-gray-700">
+                {fmtDate(booking.startDate)} → {fmtDate(booking.endDate)}
+              </span>
+            </div>
+          </div>
+
+          {/* Confirmed at */}
+          {booking.depositConfirmedAt && (
+            <div className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 rounded-lg px-3 py-1.5">
+              <MdCheckCircle className="text-sm" />
+              Xác nhận lúc {fmtDate(booking.depositConfirmedAt)} {fmtTime(booking.depositConfirmedAt)}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+PaymentCard.propTypes = {
+  booking: PropTypes.object.isRequired,
+  index: PropTypes.number.isRequired,
+};
+
 const History = () => {
   const { user } = useAuthContext();
   const [isLoading, setIsLoading] = useState(true);
@@ -448,6 +664,7 @@ const History = () => {
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState("history"); // "history" | "payment"
 
   useEffect(() => {
     if (!user?._id) { setIsLoading(false); return; }
@@ -474,6 +691,14 @@ const History = () => {
       booking.pickupLocation.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  const handleConfirmReceive = async (bookingId) => {
+    await bookingService.updateBookingStatus(bookingId, "in_progress");
+    // Re-fetch bookings to update UI
+    const res = await bookingService.getBookingsByCustomer(user._id);
+    const raw = res?.data ?? res ?? [];
+    setBookings(Array.isArray(raw) ? raw.map(normalizeBooking) : []);
+  };
 
   if (isLoading) {
     return (
@@ -538,107 +763,156 @@ const History = () => {
         {/* Stats Summary */}
         <StatsSummary bookings={bookings} />
 
-        {/* Filter & Search Bar */}
-        <div className="bg-white rounded-2xl shadow-lg p-4 mb-8 animate-fade-in">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm theo tên xe, địa điểm..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-sky-500 focus:bg-white transition-all"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <MdClose />
-                </button>
-              )}
-            </div>
-
-            {/* Filter Toggle (Mobile) */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="lg:hidden flex items-center justify-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-700"
-            >
-              <MdFilterList />
-              Bộ lọc
-            </button>
-
-            {/* Filter Buttons (Desktop) */}
-            <div className="hidden lg:flex items-center gap-2">
-              {filterOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setActiveFilter(option.value)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                    activeFilter === option.value
-                      ? "bg-sky-500 text-white shadow-lg shadow-sky-500/30"
-                      : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Mobile Filters */}
-          <div
-            className={`lg:hidden overflow-hidden transition-all duration-300 ${
-              showFilters ? "max-h-40 mt-4" : "max-h-0"
+        {/* Tab Switcher */}
+        <div className="flex gap-2 mb-6 p-1 bg-white rounded-2xl shadow-md w-fit">
+          <button
+            onClick={() => setActiveTab("history")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+              activeTab === "history"
+                ? "bg-sky-500 text-white shadow-lg shadow-sky-500/30"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            <div className="flex flex-wrap gap-2">
-              {filterOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => {
-                    setActiveFilter(option.value);
-                    setShowFilters(false);
-                  }}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                    activeFilter === option.value
-                      ? "bg-sky-500 text-white"
-                      : "bg-gray-50 text-gray-600"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+            <MdHistory className="text-base" />
+            Lịch sử thuê xe
+          </button>
+          <button
+            onClick={() => setActiveTab("payment")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+              activeTab === "payment"
+                ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <MdReceipt className="text-base" />
+            Lịch sử thanh toán
+          </button>
+        </div>
+        {/* Filter & Search Bar — chỉ hiện trên tab lịch sử thuê xe */}
+        {activeTab === "history" && (
+          <div className="bg-white rounded-2xl shadow-lg p-4 mb-8 animate-fade-in">
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Search */}
+              <div className="flex-1 relative">
+                <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl" />
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm theo tên xe, địa điểm..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-sky-500 focus:bg-white transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <MdClose />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Toggle (Mobile) */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="lg:hidden flex items-center justify-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-700"
+              >
+                <MdFilterList />
+                Bộ lọc
+              </button>
+
+              {/* Filter Buttons (Desktop) */}
+              <div className="hidden lg:flex items-center gap-2">
+                {filterOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setActiveFilter(option.value)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                      activeFilter === option.value
+                        ? "bg-sky-500 text-white shadow-lg shadow-sky-500/30"
+                        : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Mobile Filters */}
+            <div
+              className={`lg:hidden overflow-hidden transition-all duration-300 ${
+                showFilters ? "max-h-40 mt-4" : "max-h-0"
+              }`}
+            >
+              <div className="flex flex-wrap gap-2">
+                {filterOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      setActiveFilter(option.value);
+                      setShowFilters(false);
+                    }}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                      activeFilter === option.value
+                        ? "bg-sky-500 text-white"
+                        : "bg-gray-50 text-gray-600"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Booking List */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center text-red-600 mb-6">
-            {error}
-          </div>
-        )}
-        {filteredBookings.length > 0 ? (
-          <div className="space-y-6">
-            {filteredBookings.map((booking, index) => (
-              <HistoryCard key={booking._id ?? booking.id} booking={booking} index={index} />
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl shadow-lg p-12">
-            <EmptyState />
-          </div>
         )}
 
-        {/* Results count */}
-        {filteredBookings.length > 0 && (
-          <p className="text-center text-gray-500 mt-8 animate-fade-in">
-            Hiển thị {filteredBookings.length} trong tổng số {bookings.length}{" "}
-            chuyến đi
-          </p>
+        {/* PAYMENT TAB */}
+        {activeTab === "payment" && (
+          <div className="space-y-4">
+            {bookings.filter((b) => b.depositStatus !== "not_paid").length === 0 ? (
+              <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+                <MdAccountBalanceWallet className="text-6xl text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 font-medium text-lg">Chưa có giao dịch nào</p>
+                <p className="text-gray-400 text-sm mt-1">Các đơn đã thanh toán cọc sẽ hiện ở đây</p>
+              </div>
+            ) : (
+              bookings
+                .filter((b) => b.depositStatus !== "not_paid")
+                .sort((a, b) => new Date(b.depositTransferredAt || b.startDate) - new Date(a.depositTransferredAt || a.startDate))
+                .map((booking, index) => (
+                  <PaymentCard key={booking._id} booking={booking} index={index} />
+                ))
+            )}
+          </div>
+        )}
+
+        {/* HISTORY TAB — Booking List */}
+        {activeTab === "history" && (
+          <>
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center text-red-600 mb-6">
+                {error}
+              </div>
+            )}
+            {filteredBookings.length > 0 ? (
+              <div className="space-y-6">
+                {filteredBookings.map((booking, index) => (
+                  <HistoryCard key={booking._id ?? booking.id} booking={booking} index={index} onConfirmReceive={handleConfirmReceive} />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl shadow-lg p-12">
+                <EmptyState />
+              </div>
+            )}
+            {filteredBookings.length > 0 && (
+              <p className="text-center text-gray-500 mt-8 animate-fade-in">
+                Hiển thị {filteredBookings.length} trong tổng số {bookings.length}{" "}
+                chuyến đi
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>

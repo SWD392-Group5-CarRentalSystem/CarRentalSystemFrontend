@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   MdDirectionsCar,
@@ -225,7 +225,7 @@ const CostBreakdown = ({ vehicle, rentalDays, rentalType }) => {
   const driverCost =
     rentalType === RENTAL_TYPES.WITH_DRIVER ? DRIVER_FEE_PER_DAY * rentalDays : 0;
   const totalAmount = vehicleCost + driverCost;
-  const depositAmount = Math.round(totalAmount * 0.3);
+  const depositAmount = Math.round(totalAmount * 0.1);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-5">
@@ -251,7 +251,7 @@ const CostBreakdown = ({ vehicle, rentalDays, rentalType }) => {
         </div>
         <div className="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-xl p-3">
           <span className="flex items-center gap-1.5 text-amber-700 text-sm font-semibold">
-            <MdInfo className="text-amber-500" /> Đặt cọc 30%
+            <MdInfo className="text-amber-500" /> Đặt cọc 10%
           </span>
           <span className="font-black text-amber-700">{formatCurrency(depositAmount)}</span>
         </div>
@@ -262,9 +262,26 @@ const CostBreakdown = ({ vehicle, rentalDays, rentalType }) => {
 
 // ===================== HELPERS =====================
 
+// dd/mm/yyyy helpers
+const autoFormatDate = (raw) => {
+  let d = raw.replace(/[^0-9]/g, "");
+  if (d.length > 8) d = d.slice(0, 8);
+  if (d.length > 4) return `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}`;
+  if (d.length > 2) return `${d.slice(0,2)}/${d.slice(2)}`;
+  return d;
+};
+const toISO = (dmy) => {
+  const p = (dmy || "").split("/");
+  return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : dmy;
+};
+const fromISO = (iso) => {
+  const p = (iso || "").split("-");
+  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
+};
+
 const calcRentalDays = (start, end) => {
   if (!start || !end) return 1;
-  const diff = Math.ceil((new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24));
+  const diff = Math.ceil((new Date(toISO(end)) - new Date(toISO(start))) / (1000 * 60 * 60 * 24));
   return diff < 1 ? 1 : diff;
 };
 
@@ -275,7 +292,7 @@ const validateStep1 = (form) => {
   if (!form.rentalType) errors.rentalType = "Vui lòng chọn hình thức thuê xe";
   if (!form.startDate) errors.startDate = "Vui lòng chọn ngày nhận xe";
   if (!form.endDate) errors.endDate = "Vui lòng chọn ngày trả xe";
-  if (form.startDate && form.endDate && form.endDate <= form.startDate)
+  if (form.startDate && form.endDate && toISO(form.endDate) <= toISO(form.startDate))
     errors.endDate = "Ngày trả xe phải sau ngày nhận";
   if (!form.pickupLocation.trim())
     errors.pickupLocation = "Vui lòng nhập địa điểm nhận xe";
@@ -329,17 +346,29 @@ const Booking = () => {
   // Helper: lấy field từ profile DB hoặc fallback về user context
   const profileField = (field) => userProfile?.[field] || user?.[field] || "—";
 
+  // Read sessionStorage once (stable, won't change per render)
+  const savedSearch = useRef(null);
+  if (savedSearch.current === null) {
+    try { savedSearch.current = JSON.parse(sessionStorage.getItem("bookingSearchData") || "null") ?? undefined; }
+    catch { savedSearch.current = undefined; }
+  }
+  const prefill = location.state?.fromSearch ? location.state : (savedSearch.current || {});
+
   const [form, setForm] = useState({
-    rentalType: "",
-    startDate: "",
-    endDate: "",
-    pickupLocation: "",
-    dropoffLocation: "",
+    rentalType: prefill.rentalType || "",
+    startDate: prefill.startDate ? fromISO(prefill.startDate) : "",
+    endDate: prefill.endDate ? fromISO(prefill.endDate) : "",
+    pickupLocation: prefill.pickupLocation || "",
+    dropoffLocation: prefill.dropoffLocation || "",
   });
 
+  const hasSavedSearch = Boolean(savedSearch.current);
+
   useEffect(() => {
-    if (!vehicle) navigate("/vehicles", { replace: true });
-  }, [vehicle, navigate]);
+    // Only redirect when there is no vehicle AND no search context at all
+    if (!vehicle && !location.state?.fromSearch && !hasSavedSearch) navigate("/vehicles", { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vehicle]);
 
   const rentalDays = useMemo(() => calcRentalDays(form.startDate, form.endDate), [form.startDate, form.endDate]);
 
@@ -348,7 +377,7 @@ const Booking = () => {
     const vehicleCost = vehicle.price * 1000 * rentalDays;
     const driverCost = form.rentalType === RENTAL_TYPES.WITH_DRIVER ? DRIVER_FEE_PER_DAY * rentalDays : 0;
     const totalAmount = vehicleCost + driverCost;
-    const depositAmount = Math.round(totalAmount * 0.3);
+    const depositAmount = Math.round(totalAmount * 0.1);
     return { vehicleCost, driverCost, totalAmount, depositAmount };
   }, [vehicle, rentalDays, form.rentalType]);
 
@@ -399,8 +428,8 @@ const Booking = () => {
         customerId: user?._id,
         vehicleId: vehicle._id ?? vehicle.id,
         rentalType: form.rentalType,
-        startDate: new Date(form.startDate).toISOString(),
-        endDate: new Date(form.endDate).toISOString(),
+        startDate: new Date(toISO(form.startDate)).toISOString(),
+        endDate: new Date(toISO(form.endDate)).toISOString(),
         pickupLocation: form.pickupLocation,
         dropoffLocation: form.dropoffLocation,
         totalAmount: String(costs.totalAmount),
@@ -440,6 +469,37 @@ const Booking = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Came from homepage search but no vehicle selected yet
+  if (!vehicle && location.state?.fromSearch) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-24 pb-16 flex items-center justify-center px-4">
+        <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xl p-12 max-w-lg w-full text-center">
+          <div className="w-20 h-20 bg-sky-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <MdDirectionsCar className="text-sky-500 text-4xl" />
+          </div>
+          <h2 className="text-2xl font-extrabold text-gray-900 mb-3">Chọn xe trước nhé!</h2>
+          <p className="text-gray-500 text-sm leading-relaxed mb-2">
+            Thông tin tìm kiếm của bạn đã được lưu:
+          </p>
+          <div className="bg-sky-50 rounded-xl p-4 text-sm text-left space-y-1.5 mb-8 border border-sky-100">
+            {form.pickupLocation && <div><span className="text-gray-400 font-medium">Điểm đón:</span> <span className="text-gray-700 font-semibold">{form.pickupLocation}</span></div>}
+            {form.startDate && <div><span className="text-gray-400 font-medium">Nhận xe:</span> <span className="text-gray-700 font-semibold">{new Date(form.startDate).toLocaleDateString("vi-VN")}</span></div>}
+            {form.endDate && <div><span className="text-gray-400 font-medium">Trả xe:</span> <span className="text-gray-700 font-semibold">{new Date(form.endDate).toLocaleDateString("vi-VN")}</span></div>}
+            {form.rentalType && <div><span className="text-gray-400 font-medium">Loại hình:</span> <span className="text-gray-700 font-semibold">{form.rentalType === "with_driver" ? "Có tài xế" : "Tự lái"}</span></div>}
+          </div>
+          <a
+            href="/vehicles"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-2xl shadow-lg shadow-sky-200 transition-all hover:-translate-y-0.5"
+          >
+            <MdDirectionsCar className="text-xl" />
+            Chọn xe ngay
+          </a>
+          <p className="text-gray-400 text-xs mt-4">Sau khi chọn xe, thông tin ngày tháng sẽ được điền tự động</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!vehicle) return null;
 
@@ -482,10 +542,11 @@ const Booking = () => {
             <div>
               <p className="text-xs text-gray-500 font-semibold mb-1.5 uppercase tracking-wide">Ngày nhận xe</p>
               <input
-                type="date"
-                min={today()}
+                type="text"
+                placeholder="dd/mm/yyyy"
+                maxLength={10}
                 value={form.startDate}
-                onChange={(e) => updateField("startDate", e.target.value)}
+                onChange={(e) => updateField("startDate", autoFormatDate(e.target.value))}
                 className={`w-full bg-gray-50 border rounded-xl px-4 py-3 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition ${errors.startDate ? "border-red-400 bg-red-50" : "border-gray-200"}`}
               />
               {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>}
@@ -493,16 +554,17 @@ const Booking = () => {
             <div>
               <p className="text-xs text-gray-500 font-semibold mb-1.5 uppercase tracking-wide">Ngày trả xe</p>
               <input
-                type="date"
-                min={form.startDate || today()}
+                type="text"
+                placeholder="dd/mm/yyyy"
+                maxLength={10}
                 value={form.endDate}
-                onChange={(e) => updateField("endDate", e.target.value)}
+                onChange={(e) => updateField("endDate", autoFormatDate(e.target.value))}
                 className={`w-full bg-gray-50 border rounded-xl px-4 py-3 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition ${errors.endDate ? "border-red-400 bg-red-50" : "border-gray-200"}`}
               />
               {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate}</p>}
             </div>
           </div>
-          {form.startDate && form.endDate && form.endDate > form.startDate && (
+          {form.startDate && form.endDate && toISO(form.endDate) > toISO(form.startDate) && (
             <div className="mt-3 flex items-center gap-2 bg-sky-50 border border-sky-200 rounded-xl px-4 py-2.5 text-sky-700 text-sm font-semibold">
               <MdAccessTime className="text-sky-500" />
               Thời gian thuê: <strong>{rentalDays} ngày</strong>
