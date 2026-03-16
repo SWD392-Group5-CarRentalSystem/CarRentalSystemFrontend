@@ -1,0 +1,532 @@
+[{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d90b"
+  },
+  "vehicleName": "VinFast VF8",
+  "vehicleType": "SUV",
+  "vehicleStatus": true,
+  "price": 1200,
+  "vehicleDetail": {
+    "vehicleBrands": "VinFast",
+    "vehicleColor": "Blue",
+    "vehicleLicensePlate": "51A-001.11",
+    "vehicleYear": 2023,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images2.thanhnien.vn/zoom/1200_630/Uploaded/chicuong/2022_12_26/vinfast-vf8-city-edition-1-7c15-9706.jpg"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d90c"
+  },
+  "vehicleName": "VinFast VF9",
+  "vehicleType": "SUV",
+  "vehicleStatus": true,
+  "price": 1500,
+  "vehicleDetail": {
+    "vehicleBrands": "VinFast",
+    "vehicleColor": "Black",
+    "vehicleLicensePlate": "51B-002.22",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 7,
+    "vehicleImage": "https://cdn.tienphong.vn/images/a6bf4f60924201126af6849ca45a3980b039b2e68480d2da6589e6ff9ba548c624bbdbb2416fe89d78f7f83417d8c92791c395aaa9493e5cdaf349cad3d4a15e/vf9-9117.jpg"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d90d"
+  },
+  "vehicleName": "VinFast VF7",
+  "vehicleType": "Crossover",
+  "vehicleStatus": true,
+  "price": 1000,
+  "vehicleDetail": {
+    "vehicleBrands": "VinFast",
+    "vehicleColor": "Silver",
+    "vehicleLicensePlate": "29A-003.33",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://vinfasthochiminh.com/OTO3602400579/files/san_pham/vf7_xam.webp"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d90e"
+  },
+  "vehicleName": "VinFast VF6",
+  "vehicleType": "Crossover",
+  "vehicleStatus": true,
+  "price": 900,
+  "vehicleDetail": {
+    "vehicleBrands": "VinFast",
+    "vehicleColor": "Blue",
+    "vehicleLicensePlate": "29B-004.44",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://xeotovinfast.com.vn/wp-content/uploads/2025/09/z5863105902097_7647cedd0e16b97f57bb7ac91d786fb2_result.jpg"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d90f"
+  },
+  "vehicleName": "VinFast VF5 Plus",
+  "vehicleType": "Crossover",
+  "vehicleStatus": true,
+  "price": 800,
+  "vehicleDetail": {
+    "vehicleBrands": "VinFast",
+    "vehicleColor": "Red",
+    "vehicleLicensePlate": "92A-005.55",
+    "vehicleYear": 2023,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://static-cms-prod.vinfastauto.id/statics/2025-02/vf5.webp"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d910"
+  },
+  "vehicleName": "Tesla Model Y",
+  "vehicleType": "Crossover",
+  "vehicleStatus": true,
+  "price": 1800,
+  "vehicleDetail": {
+    "vehicleBrands": "Tesla",
+    "vehicleColor": "White",
+    "vehicleLicensePlate": "43A-006.66",
+    "vehicleYear": 2023,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1619767886558-efdc259cde1a?w=800&q=80"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d911"
+  },
+  "vehicleName": "Tesla Model 3",
+  "vehicleType": "Sedan",
+  "vehicleStatus": true,
+  "price": 1600,
+  "vehicleDetail": {
+    "vehicleBrands": "Tesla",
+    "vehicleColor": "Red",
+    "vehicleLicensePlate": "51C-007.77",
+    "vehicleYear": 2023,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=800&q=80"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d912"
+  },
+  "vehicleName": "Tesla Model S",
+  "vehicleType": "Sedan",
+  "vehicleStatus": true,
+  "price": 2200,
+  "vehicleDetail": {
+    "vehicleBrands": "Tesla",
+    "vehicleColor": "Black",
+    "vehicleLicensePlate": "51D-008.88",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://vcdn1-vnexpress.vnecdn.net/2020/06/17/Tesla-Model-S-1-9869-1592358058.jpg?w=680&h=0&q=100&dpr=2&fit=crop&s=ycUTBs_f1TkReUrvaz1QSw"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d913"
+  },
+  "vehicleName": "BMW i4",
+  "vehicleType": "Sedan",
+  "vehicleStatus": false,
+  "price": 2000,
+  "vehicleDetail": {
+    "vehicleBrands": "BMW",
+    "vehicleColor": "Gray",
+    "vehicleLicensePlate": "29C-009.99",
+    "vehicleYear": 2023,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&q=80"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d914"
+  },
+  "vehicleName": "BMW iX",
+  "vehicleType": "SUV",
+  "vehicleStatus": true,
+  "price": 2300,
+  "vehicleDetail": {
+    "vehicleBrands": "BMW",
+    "vehicleColor": "White",
+    "vehicleLicensePlate": "29D-010.10",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1617654112368-307921291f42?w=800&q=80"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d915"
+  },
+  "vehicleName": "Audi e-tron GT",
+  "vehicleType": "Coupe",
+  "vehicleStatus": true,
+  "price": 2500,
+  "vehicleDetail": {
+    "vehicleBrands": "Audi",
+    "vehicleColor": "Gray",
+    "vehicleLicensePlate": "51E-011.11",
+    "vehicleYear": 2023,
+    "vehicleSeatCount": 4,
+    "vehicleImage": "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=800&q=80"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d916"
+  },
+  "vehicleName": "Audi Q8 e-tron",
+  "vehicleType": "SUV",
+  "vehicleStatus": false,
+  "price": 2800,
+  "vehicleDetail": {
+    "vehicleBrands": "Audi",
+    "vehicleColor": "Black",
+    "vehicleLicensePlate": "43B-012.12",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800&q=80"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d917"
+  },
+  "vehicleName": "Hyundai Ioniq 5",
+  "vehicleType": "Crossover",
+  "vehicleStatus": true,
+  "price": 1300,
+  "vehicleDetail": {
+    "vehicleBrands": "Hyundai",
+    "vehicleColor": "White",
+    "vehicleLicensePlate": "92B-013.13",
+    "vehicleYear": 2023,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d918"
+  },
+  "vehicleName": "Hyundai Ioniq 6",
+  "vehicleType": "Sedan",
+  "vehicleStatus": true,
+  "price": 1400,
+  "vehicleDetail": {
+    "vehicleBrands": "Hyundai",
+    "vehicleColor": "Blue",
+    "vehicleLicensePlate": "51F-014.14",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d919"
+  },
+  "vehicleName": "Kia EV6",
+  "vehicleType": "Crossover",
+  "vehicleStatus": true,
+  "price": 1100,
+  "vehicleDetail": {
+    "vehicleBrands": "Kia",
+    "vehicleColor": "Silver",
+    "vehicleLicensePlate": "15A-015.15",
+    "vehicleYear": 2023,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&q=80"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d91a"
+  },
+  "vehicleName": "Kia EV9",
+  "vehicleType": "SUV",
+  "vehicleStatus": true,
+  "price": 1600,
+  "vehicleDetail": {
+    "vehicleBrands": "Kia",
+    "vehicleColor": "White",
+    "vehicleLicensePlate": "92C-016.16",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 7,
+    "vehicleImage": "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d91b"
+  },
+  "vehicleName": "Porsche Taycan",
+  "vehicleType": "Sedan",
+  "vehicleStatus": false,
+  "price": 3000,
+  "vehicleDetail": {
+    "vehicleBrands": "Porsche",
+    "vehicleColor": "Black",
+    "vehicleLicensePlate": "29E-017.17",
+    "vehicleYear": 2023,
+    "vehicleSeatCount": 4,
+    "vehicleImage": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d91c"
+  },
+  "vehicleName": "Porsche Macan Electric",
+  "vehicleType": "SUV",
+  "vehicleStatus": false,
+  "price": 2800,
+  "vehicleDetail": {
+    "vehicleBrands": "Porsche",
+    "vehicleColor": "Red",
+    "vehicleLicensePlate": "29F-018.18",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&q=80"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d91d"
+  },
+  "vehicleName": "Mercedes EQS 450",
+  "vehicleType": "Sedan",
+  "vehicleStatus": true,
+  "price": 3500,
+  "vehicleDetail": {
+    "vehicleBrands": "Mercedes",
+    "vehicleColor": "Black",
+    "vehicleLicensePlate": "51G-019.19",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800&q=80"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5c4cc91ce1350e388d91e"
+  },
+  "vehicleName": "Lucid Air Grand Touring",
+  "vehicleType": "Sedan",
+  "vehicleStatus": true,
+  "price": 4000,
+  "vehicleDetail": {
+    "vehicleBrands": "Lucid",
+    "vehicleColor": "White",
+    "vehicleLicensePlate": "51H-020.20",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&q=80"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5cd8da8e9e9a252e1d8be"
+  },
+  "vehicleName": "VinFast VF8",
+  "vehicleType": "SUV",
+  "vehicleStatus": true,
+  "price": 1200,
+  "vehicleDetail": {
+    "vehicleBrands": "VinFast",
+    "vehicleColor": "Trắng",
+    "vehicleLicensePlate": "30A-001.11",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images2.thanhnien.vn/528068263637045248/2024/4/30/vf-8-2-1714454647361600503864.jpg\n"
+  },
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-03-02T17:49:01.151Z"
+  },
+  "updatedAt": {
+    "$date": "2026-03-02T17:49:01.151Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5cd8da8e9e9a252e1d8bf"
+  },
+  "vehicleName": "VinFast VF9",
+  "vehicleType": "SUV",
+  "vehicleStatus": true,
+  "price": 1500,
+  "vehicleDetail": {
+    "vehicleBrands": "VinFast",
+    "vehicleColor": "Đen",
+    "vehicleLicensePlate": "51A-002.22",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 7,
+    "vehicleImage": "https://cdn.tienphong.vn/images/a6bf4f60924201126af6849ca45a39805427e00fa50421e916f5d53ba0820d561decee6aef1c49a56f2076268907472891c395aaa9493e5cdaf349cad3d4a15e/anh-1-153.jpg"
+  },
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-03-02T17:49:01.152Z"
+  },
+  "updatedAt": {
+    "$date": "2026-03-02T17:49:01.152Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5cd8da8e9e9a252e1d8c0"
+  },
+  "vehicleName": "Tesla Model Y",
+  "vehicleType": "Crossover",
+  "vehicleStatus": true,
+  "price": 1800,
+  "vehicleDetail": {
+    "vehicleBrands": "Tesla",
+    "vehicleColor": "Đỏ",
+    "vehicleLicensePlate": "43A-003.33",
+    "vehicleYear": 2023,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=600"
+  },
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-03-02T17:49:01.152Z"
+  },
+  "updatedAt": {
+    "$date": "2026-03-02T17:49:01.152Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5cd8da8e9e9a252e1d8c1"
+  },
+  "vehicleName": "BMW i4",
+  "vehicleType": "Sedan",
+  "vehicleStatus": false,
+  "price": 2000,
+  "vehicleDetail": {
+    "vehicleBrands": "BMW",
+    "vehicleColor": "Xanh dương",
+    "vehicleLicensePlate": "30A-004.44",
+    "vehicleYear": 2023,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600"
+  },
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-03-02T17:49:01.152Z"
+  },
+  "updatedAt": {
+    "$date": "2026-03-02T17:49:01.152Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5cd8da8e9e9a252e1d8c2"
+  },
+  "vehicleName": "Audi e-tron GT",
+  "vehicleType": "Coupe",
+  "vehicleStatus": true,
+  "price": 2500,
+  "vehicleDetail": {
+    "vehicleBrands": "Audi",
+    "vehicleColor": "Bạc",
+    "vehicleLicensePlate": "51A-005.55",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 4,
+    "vehicleImage": "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=600"
+  },
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-03-02T17:49:01.152Z"
+  },
+  "updatedAt": {
+    "$date": "2026-03-02T17:49:01.152Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5cd8da8e9e9a252e1d8c3"
+  },
+  "vehicleName": "Hyundai Ioniq 5",
+  "vehicleType": "Crossover",
+  "vehicleStatus": true,
+  "price": 1300,
+  "vehicleDetail": {
+    "vehicleBrands": "Hyundai",
+    "vehicleColor": "Trắng",
+    "vehicleLicensePlate": "65A-006.66",
+    "vehicleYear": 2023,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1609893700969-66dc25e1e275?w=600"
+  },
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-03-02T17:49:01.152Z"
+  },
+  "updatedAt": {
+    "$date": "2026-03-02T17:49:01.152Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5cd8da8e9e9a252e1d8c4"
+  },
+  "vehicleName": "Kia EV6",
+  "vehicleType": "Crossover",
+  "vehicleStatus": true,
+  "price": 1100,
+  "vehicleDetail": {
+    "vehicleBrands": "Kia",
+    "vehicleColor": "Xám",
+    "vehicleLicensePlate": "15A-007.77",
+    "vehicleYear": 2023,
+    "vehicleSeatCount": 5,
+    "vehicleImage": "https://images.unsplash.com/photo-1593941707882-a5bac6861d75?w=600"
+  },
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-03-02T17:49:01.152Z"
+  },
+  "updatedAt": {
+    "$date": "2026-03-02T17:49:01.152Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69a5cd8da8e9e9a252e1d8c5"
+  },
+  "vehicleName": "Porsche Taycan",
+  "vehicleType": "Sedan",
+  "vehicleStatus": false,
+  "price": 3000,
+  "vehicleDetail": {
+    "vehicleBrands": "Porsche",
+    "vehicleColor": "Vàng",
+    "vehicleLicensePlate": "30A-008.88",
+    "vehicleYear": 2024,
+    "vehicleSeatCount": 4,
+    "vehicleImage": "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=600"
+  },
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-03-02T17:49:01.152Z"
+  },
+  "updatedAt": {
+    "$date": "2026-03-02T17:49:01.152Z"
+  }
+}]
