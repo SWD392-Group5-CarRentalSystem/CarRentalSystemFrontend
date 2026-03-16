@@ -10,6 +10,7 @@ import {
   MdClose,
   MdLogout,
   MdElectricCar,
+  MdPerson,
 } from "react-icons/md";
 import { useAuthContext } from "../../context";
 
@@ -43,6 +44,12 @@ const StaffLayout = () => {
       label: "Khách hàng",
       icon: MdPeople,
       path: "/staff/customers",
+    },
+    {
+      id: "profile",
+      label: "Hồ sơ",
+      icon: MdPerson,
+      path: "/staff/profile",
     },
   ];
 

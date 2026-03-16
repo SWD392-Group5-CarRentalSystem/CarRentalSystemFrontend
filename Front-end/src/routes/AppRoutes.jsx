@@ -7,9 +7,9 @@ import { Booking } from "../pages/Booking";
 import { History } from "../pages/History";
 import { Profile } from "../pages/Profile";
 import { Vehicles } from "../pages/Vehicles";
-import { Dashboard, Vehicles as ManagerVehicles, Bookings, Drivers } from "../pages/Manager";
-import { StaffDashboard, StaffBookings } from "../pages/Staff";
-import { DriverDashboard, DriverSchedule } from "../pages/Driver";
+import { Dashboard, Vehicles as ManagerVehicles, Bookings, Drivers, Staff as ManagerStaff, ManagerProfile } from "../pages/Manager";
+import { StaffDashboard, StaffBookings, StaffProfile, StaffCars, StaffCustomers } from "../pages/Staff";
+import { DriverDashboard, DriverSchedule, DriverProfile } from "../pages/Driver";
 import { PaymentResult } from "../pages/Payment";
 import About from "../pages/About/About";
 import { ManagerRoute, StaffRoute, DriverRoute } from "./RoleBasedRoute";
@@ -43,6 +43,8 @@ const AppRoutes = () => {
           <Route path="vehicles" element={<ManagerVehicles />} />
           <Route path="bookings" element={<Bookings />} />
           <Route path="drivers" element={<Drivers />} />
+          <Route path="staff" element={<ManagerStaff />} />
+          <Route path="profile" element={<ManagerProfile />} />
         </Route>
 
         {/* Staff Routes - Protected */}
@@ -56,7 +58,9 @@ const AppRoutes = () => {
         >
           <Route path="dashboard" element={<StaffDashboard />} />
           <Route path="bookings" element={<StaffBookings />} />
-          {/* Additional staff routes can be added here */}
+          <Route path="cars" element={<StaffCars />} />
+          <Route path="customers" element={<StaffCustomers />} />
+          <Route path="profile" element={<StaffProfile />} />
         </Route>
 
         {/* Driver Routes - Protected */}
@@ -70,6 +74,7 @@ const AppRoutes = () => {
         >
           <Route path="dashboard" element={<DriverDashboard />} />
           <Route path="schedule" element={<DriverSchedule />} />
+          <Route path="profile" element={<DriverProfile />} />
         </Route>
 
         <Route path="/login" element={

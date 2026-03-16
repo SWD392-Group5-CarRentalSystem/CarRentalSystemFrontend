@@ -1,12 +1,14 @@
-import { AuthProvider } from './context';
+import { AuthProvider, ToastProvider } from './context';
 import { AppRoutes } from './routes';
 import './App.css';
 
 function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 

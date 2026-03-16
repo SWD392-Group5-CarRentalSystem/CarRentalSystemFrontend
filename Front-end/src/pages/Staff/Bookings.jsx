@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { Calendar, Search, CheckCircle, XCircle, Clock, ChevronDown, UserCheck, X, Star, Car } from "lucide-react";
-import { bookingService, staffService } from "../../services/api";
+import { Calendar, Search, CheckCircle, XCircle, Clock, ChevronDown, UserCheck, X, Star, Car, FileText, Eye } from "lucide-react";
+import { bookingService, staffService, paymentService } from "../../services/api";
+import { useToast } from "../../context";
+import { ConfirmModal } from "../../components/common";
 
 const STATUS_TRANSITIONS = {
   pending: ["confirmed", "cancelled"],
   awaiting_deposit_confirmation: ["confirmed", "cancelled"],
   confirmed: ["cancelled"],          // vehicle_delivered handled by dedicated "Xuất xe" button
   vehicle_delivered: [],              // in_progress handled by customer's "Nhận xe" button
-  in_progress: ["vehicle_returned", "deposit_lost"],   // vehicle_returned → auto đẩy lên completed
+  in_progress: [],                    // transporting handled by driver
+  transporting: [],                   // vehicle_returned handled by driver after payment
   vehicle_returned: [],
   completed: [],
   cancelled: [],
@@ -21,7 +24,8 @@ const STATUS_TEXT = {
   confirmed: "Đã xác nhận",
   vehicle_delivered: "Đã giao xe",
   in_progress: "Đang thuê",
-  vehicle_returned: "Xe đã trả → Hoàn thành",
+  transporting: "Đang chở khách 🚗",
+  vehicle_returned: "Xe đã trả — Chờ thanh toán",
   completed: "Hoàn thành",
   cancelled: "Đã hủy",
   deposit_lost: "Mất cọc",
@@ -35,12 +39,26 @@ export default function StaffBookings() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [updatingId, setUpdatingId] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
+  // confirmPayModal: null | { bookingId: string }
+  const [confirmPayModal, setConfirmPayModal] = useState(null);
+  const [confirmingPay, setConfirmingPay] = useState(false);
+  // createPayLink: null | { bookingId: string, remaining: number }
+  const [creatingPayLink, setCreatingPayLink] = useState(null);
 
   // Driver assignment modal state
   const [driverModal, setDriverModal] = useState(null); // { bookingId, startDate, endDate }
   const [drivers, setDrivers] = useState([]);
   const [driversLoading, setDriversLoading] = useState(false);
   const [assigningDriver, setAssigningDriver] = useState(false);
+
+  const toast = useToast();
+
+  // Xuất xe (contract upload) modal state
+  const [xuatXeModal, setXuatXeModal] = useState(null); // booking object
+  const [xuatXeFile, setXuatXeFile] = useState(null);
+  const [xuatXePreviewUrl, setXuatXePreviewUrl] = useState(null);
+  const [xuatXeUploading, setXuatXeUploading] = useState(false);
+  const [xuatXeError, setXuatXeError] = useState("");
 
   useEffect(() => {
     setBreadcrumb({ title: "Quản lý đặt xe" });
@@ -67,6 +85,44 @@ export default function StaffBookings() {
     }
   };
 
+  const openXuatXe = (booking) => {
+    setXuatXeModal(booking);
+    setXuatXeFile(null);
+    setXuatXePreviewUrl(null);
+    setXuatXeError("");
+  };
+
+  const handleXuatXeFileChange = (file) => {
+    setXuatXeFile(file);
+    setXuatXeError("");
+    if (file && file.type.startsWith("image/")) {
+      const url = URL.createObjectURL(file);
+      setXuatXePreviewUrl(url);
+    } else {
+      setXuatXePreviewUrl(null);
+    }
+  };
+
+  const handleXuatXeSubmit = async () => {
+    if (!xuatXeFile) { setXuatXeError("Vui lòng chọn file hợp đồng."); return; }
+    if (!xuatXeModal) return;
+    setXuatXeUploading(true);
+    setXuatXeError("");
+    const receiverRole = xuatXeModal.rentalType === "with_driver" ? "driver" : "customer";
+    try {
+      await bookingService.receiveVehicle(xuatXeModal._id, xuatXeFile, receiverRole);
+      setXuatXeModal(null);
+      setXuatXeFile(null);
+      if (xuatXePreviewUrl) URL.revokeObjectURL(xuatXePreviewUrl);
+      setXuatXePreviewUrl(null);
+      await fetchBookings();
+    } catch (err) {
+      setXuatXeError(err?.response?.data?.message ?? err?.message ?? "Upload hợp đồng thất bại.");
+    } finally {
+      setXuatXeUploading(false);
+    }
+  };
+
   const handleConfirmDeposit = async (bookingId) => {
     try {
       setUpdatingId(bookingId);
@@ -74,7 +130,7 @@ export default function StaffBookings() {
       await fetchBookings();
     } catch (error) {
       console.error("Failed to confirm deposit:", error);
-      alert("Xác nhận cọc thất bại: " + (error?.message || "Lỗi không xác định"));
+      toast.error("Xác nhận cọ thất bại: " + (error?.message || "Lỗi không xác định"));
     } finally {
       setUpdatingId(null);
     }
@@ -92,7 +148,7 @@ export default function StaffBookings() {
       await fetchBookings();
     } catch (error) {
       console.error("Failed to update status:", error);
-      alert("Cập nhật trạng thái thất bại: " + (error?.message || "Lỗi không xác định"));
+      toast.error("Cập nhật trạng thái thất bại: " + (error?.message || "Lỗi không xác định"));
     } finally {
       setUpdatingId(null);
     }
@@ -162,7 +218,7 @@ export default function StaffBookings() {
       setDrivers(computeBusy(allDrivers));
     } catch (err2) {
       console.error("[DriverModal] getAllDrivers failed:", err2);
-      alert("Không tải được danh sách tài xế. Vui lòng kiểm tra console.");
+      toast.error("Không tải được danh sách tài xế. Vui lòng kiểm tra console.");
     } finally {
       setDriversLoading(false);
     }
@@ -182,9 +238,45 @@ export default function StaffBookings() {
       closeDriverModal();
     } catch (error) {
       console.error("Failed to assign driver:", error);
-      alert("Chỉ định tài xế thất bại: " + (error?.response?.data?.message || error?.message || "Lỗi không xác định"));
+      toast.error("Chỉ định tài xế thất bại: " + (error?.response?.data?.message || error?.message || "Lỗi không xác định"));
     } finally {
       setAssigningDriver(false);
+    }
+  };
+
+  const handleConfirmPay = async () => {
+    if (!confirmPayModal) return;
+    try {
+      setConfirmingPay(true);
+      setUpdatingId(confirmPayModal.bookingId);
+      await bookingService.updateBookingStatus(confirmPayModal.bookingId, "completed");
+      await fetchBookings();
+      setConfirmPayModal(null);
+    } catch (err) {
+      toast.error(err?.message || "Đã xảy ra lỗi khi xác nhận thanh toán");
+    } finally {
+      setConfirmingPay(false);
+      setUpdatingId(null);
+    }
+  };
+
+  const handleCreatePayLink = async () => {
+    if (!creatingPayLink) return;
+    try {
+      const res = await paymentService.createRemainingPaymentUrl(
+        creatingPayLink.bookingId,
+        creatingPayLink.remaining,
+        'staff'
+      );
+      const url = res?.paymentUrl ?? res?.data?.paymentUrl;
+      if (url) {
+        setCreatingPayLink(null);
+        window.location.href = url;
+      } else {
+        toast.error("Không tạo được link thanh toán. Vui lòng thử lại.");
+      }
+    } catch (err) {
+      toast.error(err?.message || "Đã xảy ra lỗi khi tạo link thanh toán");
     }
   };
 
@@ -195,6 +287,7 @@ export default function StaffBookings() {
       confirmed: "bg-sky-100 text-sky-700 border-sky-200",
       vehicle_delivered: "bg-blue-100 text-blue-700 border-blue-200",
       in_progress: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      transporting: "bg-violet-100 text-violet-700 border-violet-200",
       vehicle_returned: "bg-indigo-100 text-indigo-700 border-indigo-200",
       completed: "bg-teal-100 text-teal-700 border-teal-200",
       cancelled: "bg-red-100 text-red-700 border-red-200",
@@ -368,13 +461,53 @@ export default function StaffBookings() {
                             {/* Xuất xe button — only for confirmed bookings */}
                         {booking.status === "confirmed" && (
                           <button
-                            onClick={() => handleUpdateStatus(booking._id, "vehicle_delivered")}
+                            onClick={() => openXuatXe(booking)}
                             disabled={isUpdating}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <Car size={14} />
-                            {isUpdating ? "Đang xử lý..." : "Xuất xe"}
+                            Xuất xe
                           </button>
+                        )}
+
+                        {/* Xem hợp đồng — if contract exists */}
+                        {booking.contractFileUrl && (
+                          <a
+                            href={booking.contractFileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-100 transition-colors text-xs font-semibold"
+                          >
+                            <FileText size={14} />
+                            Xem HĐ
+                          </a>
+                        )}
+
+                        {/* Xác nhận / tạo thanh toán — self_drive vehicle_returned */}
+                        {booking.rentalType === "self_drive" && booking.status === "vehicle_returned" && (
+                          <>
+                            {/* Tạo link VNPay cho khách */}
+                            <button
+                              onClick={() => setCreatingPayLink({
+                                bookingId: booking._id,
+                                remaining: (Number(booking.totalAmount) || 0) - (Number(booking.depositAmount) || 0),
+                              })}
+                              disabled={isUpdating}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <CheckCircle size={14} />
+                              Tạo thanh toán
+                            </button>
+                            {/* Xác nhận đã nhận tiền mặt */}
+                            <button
+                              onClick={() => setConfirmPayModal({ bookingId: booking._id })}
+                              disabled={isUpdating || confirmingPay}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <CheckCircle size={14} />
+                              Đã nhận TT
+                            </button>
+                          </>
                         )}
 
                         {/* Assign driver — with_driver bookings not finished */}
@@ -484,6 +617,108 @@ export default function StaffBookings() {
         )}
       </div>
 
+      {/* Xuất xe — Contract Upload Modal */}
+      {xuatXeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Car size={20} className="text-emerald-600" />
+                <div>
+                  <h2 className="text-base font-bold text-gray-800">Xuất xe &amp; Ký hợp đồng</h2>
+                  <p className="text-xs text-gray-400">
+                    {xuatXeModal.vehicleId?.vehicleName ?? ""}
+                    {" — "}
+                    {xuatXeModal.rentalType === "with_driver" ? "Giao cho tài xế" : "Giao cho khách hàng"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setXuatXeModal(null); if (xuatXePreviewUrl) URL.revokeObjectURL(xuatXePreviewUrl); }}
+                className="p-1.5 rounded-lg hover:bg-gray-100"
+              >
+                <X size={18} className="text-gray-500" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-4 space-y-4">
+              <p className="text-sm text-gray-600">
+                Chụp ảnh hoặc scan hợp đồng giấy đã ký rồi tải lên.
+                Sau khi upload thành công, hệ thống sẽ tự động chuyển trạng thái sang
+                <strong> Đang thuê</strong>.
+              </p>
+
+              {/* File picker */}
+              <div className="border-2 border-dashed border-emerald-300 rounded-xl p-5 text-center bg-emerald-50 hover:bg-emerald-100 transition-colors cursor-pointer">
+                <label className="cursor-pointer block">
+                  <FileText className="mx-auto text-emerald-400 mb-2" size={36} />
+                  <span className="text-sm font-semibold text-emerald-600">
+                    {xuatXeFile ? xuatXeFile.name : "Nhấn để chọn file (ảnh hoặc PDF)"}
+                  </span>
+                  {xuatXeFile && (
+                    <p className="text-xs text-gray-400 mt-0.5">{(xuatXeFile.size / 1024).toFixed(1)} KB</p>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="hidden"
+                    onChange={(e) => handleXuatXeFileChange(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+              </div>
+
+              {/* Image preview */}
+              {xuatXePreviewUrl && (
+                <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                  <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-200 bg-white">
+                    <Eye size={14} className="text-gray-500" />
+                    <span className="text-xs font-medium text-gray-600">Xem trước file ảnh</span>
+                  </div>
+                  <img
+                    src={xuatXePreviewUrl}
+                    alt="preview"
+                    className="w-full max-h-64 object-contain p-2"
+                  />
+                </div>
+              )}
+
+              {/* PDF note */}
+              {xuatXeFile && xuatXeFile.type === "application/pdf" && (
+                <div className="flex items-center gap-2 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <FileText size={16} className="text-blue-500 shrink-0" />
+                  <p className="text-sm text-blue-700">File PDF: <strong>{xuatXeFile.name}</strong></p>
+                </div>
+              )}
+
+              {xuatXeError && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{xuatXeError}</p>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 px-6 pb-5">
+              <button
+                type="button"
+                onClick={() => { setXuatXeModal(null); if (xuatXePreviewUrl) URL.revokeObjectURL(xuatXePreviewUrl); }}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleXuatXeSubmit}
+                disabled={xuatXeUploading || !xuatXeFile}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {xuatXeUploading ? "Đang upload..." : "✔ Xuất xe và lưu hợp đồng"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Driver Assignment Modal */}
       {driverModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -576,6 +811,47 @@ export default function StaffBookings() {
           </div>
         </div>
       )}
+
+      {/* Confirm tạo link thanh toán VNPay */}
+      <ConfirmModal
+        open={!!creatingPayLink}
+        variant="info"
+        icon="💳"
+        title="Tạo thanh toán VNPay"
+        description={
+          creatingPayLink ? (
+            <>
+              Tạo link VNPay cho phần còn lại:{" "}
+              <span className="font-semibold text-sky-600">
+                {new Intl.NumberFormat("vi-VN").format(creatingPayLink.remaining)} ₫
+              </span>
+              . Bạn sẽ được chuyển đến trang thanh toán.
+            </>
+          ) : ""
+        }
+        confirmLabel="Tạo thanh toán"
+        onConfirm={handleCreatePayLink}
+        onCancel={() => setCreatingPayLink(null)}
+        loading={false}
+      />
+
+      {/* Confirm thanh toán còn lại Modal */}
+      <ConfirmModal
+        open={!!confirmPayModal}
+        variant="success"
+        icon="💰"
+        title="Xác nhận thanh toán"
+        description={
+          <>
+            Khách đã thanh toán phần còn lại? Đơn sẽ chuyển sang trạng thái{" "}
+            <span className="font-semibold text-emerald-600">Hoàn thành</span>.
+          </>
+        }
+        confirmLabel="Xác nhận"
+        onConfirm={handleConfirmPay}
+        onCancel={() => setConfirmPayModal(null)}
+        loading={confirmingPay}
+      />
     </div>
   );
 }

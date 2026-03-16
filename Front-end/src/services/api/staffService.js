@@ -3,6 +3,11 @@ import axiosInstance from './axiosConfig';
 export const staffService = {
   // ==================== STAFF ====================
 
+  // Create a new staff
+  createStaff: async (staffData) => {
+    return await axiosInstance.post('/auth/staff', staffData);
+  },
+
   // Get all staff
   getAllStaff: async (params) => {
     return await axiosInstance.get('/auth/staff', { params });
@@ -15,7 +20,7 @@ export const staffService = {
 
   // Update staff
   updateStaff: async (id, staffData) => {
-    return await axiosInstance.patch(`/auth/staff/${id}`, staffData);
+    return await axiosInstance.put(`/auth/staff/${id}`, staffData);
   },
 
   // Delete staff
@@ -42,7 +47,7 @@ export const staffService = {
 
   // Update driver
   updateDriver: async (id, driverData) => {
-    return await axiosInstance.patch(`/auth/driver/${id}`, driverData);
+    return await axiosInstance.put(`/auth/driver/${id}`, driverData);
   },
 
   // Delete driver

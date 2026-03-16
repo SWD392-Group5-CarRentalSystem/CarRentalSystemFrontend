@@ -6,3 +6,4 @@ export { dashboardService } from './dashboardService';
 export { staffService } from './staffService';
 export { profileService } from './profileService';
 export { paymentService } from './paymentService';
+export { reportService } from './reportService';

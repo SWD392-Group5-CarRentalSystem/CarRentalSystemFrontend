@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { Calendar, Search, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Calendar, Search, CheckCircle, XCircle, Clock, Eye, Trash2, X } from "lucide-react";
 import { bookingService } from "../../services/api";
+import { useToast } from "../../context";
+import { ConfirmModal } from "../../components/common";
 
 export default function Bookings() {
   const { setBreadcrumb } = useOutletContext();
@@ -9,6 +11,12 @@ export default function Bookings() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [detailBooking, setDetailBooking] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     setBreadcrumb({ title: "Bookings" });
@@ -19,13 +27,44 @@ export default function Bookings() {
     try {
       setLoading(true);
       const response = await bookingService.getAllBookings();
-      // axiosInstance interceptor trả về response.data trực tiếp
       setBookings(response?.data ?? []);
     } catch (error) {
       console.error('Failed to fetch bookings:', error);
       setBookings([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancel = (booking) => {
+    setCancelTarget(booking);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget) return;
+    try {
+      setCancelling(true);
+      await bookingService.updateBookingStatus(cancelTarget._id, 'cancelled');
+      setCancelTarget(null);
+      fetchBookings();
+    } catch (err) {
+      toast.error(err?.message || 'Lỗi khi huỷ đơn');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await bookingService.deleteBooking(deleteTarget._id);
+      setDeleteTarget(null);
+      fetchBookings();
+    } catch (err) {
+      toast.error(err?.message || 'Lỗi khi xóa đơn thuê');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -151,6 +190,7 @@ export default function Bookings() {
                 <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Thời gian</th>
                 <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Tổng tiền</th>
                 <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Trạng thái</th>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -185,6 +225,27 @@ export default function Bookings() {
                       {getStatusText(booking.status)}
                     </span>
                   </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setDetailBooking(booking)}
+                        className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50" title="Xem chi tiết">
+                        <Eye size={16} />
+                      </button>
+                      {!['completed','cancelled','deposit_lost'].includes(booking.status) && (
+                        <button
+                          onClick={() => handleCancel(booking)}
+                          className="p-1.5 rounded-lg text-orange-500 hover:bg-orange-50" title="Huỷ đơn">
+                          <XCircle size={16} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setDeleteTarget(booking)}
+                        className="p-1.5 rounded-lg text-red-500 hover:bg-red-50" title="Xoá">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -198,6 +259,74 @@ export default function Bookings() {
           </div>
         )}
       </div>
+
+      {/* Booking Detail Modal */}
+      {detailBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white">
+              <h2 className="text-lg font-semibold">Chi tiết đơn thuê</h2>
+              <button onClick={() => setDetailBooking(null)} className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+            </div>
+            <div className="p-6 space-y-3 text-sm">
+              {[
+                ['Đơn thuê #', String(detailBooking._id).slice(-8).toUpperCase()],
+                ['Khách hàng', detailBooking.customerId?.username || detailBooking.customerId],
+                ['Xe', detailBooking.vehicleId?.vehicleName || detailBooking.vehicleId],
+                ['Loại thuê', detailBooking.rentalType === 'with_driver' ? 'Có tài xế' : 'Tự lái'],
+                ['Tài xế', detailBooking.driverId?.username || '—'],
+                ['Bắt đầu', new Date(detailBooking.startDate).toLocaleDateString('vi-VN')],
+                ['Kết thúc', new Date(detailBooking.endDate).toLocaleDateString('vi-VN')],
+                ['Điểm đón', detailBooking.pickupLocation],
+                ['Điểm trả', detailBooking.dropoffLocation],
+                ['Tổng tiền', new Intl.NumberFormat('vi-VN',{style:'currency',currency:'VND'}).format(Number(detailBooking.totalAmount)||0)],
+                ['Tiền cọc', new Intl.NumberFormat('vi-VN',{style:'currency',currency:'VND'}).format(Number(detailBooking.depositAmount)||0)],
+                ['Trạng thái cọc', detailBooking.depositStatus],
+                ['Trạng thái', getStatusText(detailBooking.status)],
+                ['Hợp đồng', detailBooking.contractFileUrl ? (
+                  <a href={detailBooking.contractFileUrl} target="_blank" rel="noreferrer"
+                    className="text-blue-600 underline">Xem file</a>
+                ) : '—'],
+              ].map(([label, val]) => (
+                <div key={label} className="flex justify-between">
+                  <span className="text-gray-500">{label}</span>
+                  <span className="font-medium text-gray-900 text-right max-w-xs">{val ?? '—'}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end p-6 pt-0">
+              <button onClick={() => setDetailBooking(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Booking Confirm */}
+      <ConfirmModal
+        open={!!cancelTarget}
+        variant="warning"
+        icon="⚠️"
+        title="Huỷ đơn thuê"
+        description={`Bạn muốn huỷ đơn thuê của ${cancelTarget?.customerId?.username || 'khách hàng'}? Hành động này không thể hoàn tác.`}
+        confirmLabel="Huỷ đơn"
+        onConfirm={handleConfirmCancel}
+        onCancel={() => setCancelTarget(null)}
+        loading={cancelling}
+      />
+
+      {/* Delete Booking Confirm */}
+      <ConfirmModal
+        open={!!deleteTarget}
+        variant="danger"
+        icon="🗑️"
+        title="Xoá đơn thuê"
+        description={`Xoá đơn thuê #${deleteTarget ? String(deleteTarget._id).slice(-8).toUpperCase() : ''}? Hành động này không thể hoàn tác.`}
+        confirmLabel="Xoá"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+        loading={deleting}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useOutletContext } from "react-router-dom";
-import { Car, Plus, Search, Filter, Edit, Trash2, Eye } from "lucide-react";
+import { Car, Plus, Search, Filter, Edit, Trash2, Eye, X } from "lucide-react";
 import { vehicleService } from "../../services/api";
 
 export default function Vehicles() {
@@ -8,22 +8,74 @@ export default function Vehicles() {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [formModal, setFormModal] = useState(null); // null | 'create' | vehicleObj
+  const [detailVehicle, setDetailVehicle] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setBreadcrumb({ title: "Vehicles" });
     fetchVehicles();
   }, []);
 
-  const fetchVehicles = async () => {
+  const fetchVehicles = useCallback(async () => {
     try {
       setLoading(true);
       const response = await vehicleService.getAllVehicles();
-      setVehicles(response.data?.data || []);
+      setVehicles(response.data || []);
     } catch (error) {
       console.error('Failed to fetch vehicles:', error);
       setVehicles([]);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const handleSave = async (formData) => {
+    setSaving(true);
+    setSaveError("");
+    try {
+      const payload = {
+        vehicleName: formData.vehicleName,
+        vehicleType: formData.vehicleType,
+        price: formData.price,
+        vehicleStatus: formData.vehicleStatus === 'true' || formData.vehicleStatus === true,
+        vehicleDetail: {
+          vehicleBrands: formData.vehicleBrands,
+          vehicleColor: formData.vehicleColor,
+          vehicleLicensePlate: formData.vehicleLicensePlate,
+          vehicleYear: Number(formData.vehicleYear),
+          vehicleSeatCount: Number(formData.vehicleSeatCount),
+          vehicleImage: formData.vehicleImage,
+        },
+      };
+      if (formModal && typeof formModal === 'object') {
+        await vehicleService.updateVehicle(formModal._id, payload);
+      } else {
+        await vehicleService.createVehicle(payload);
+      }
+      setFormModal(null);
+      fetchVehicles();
+    } catch (err) {
+      setSaveError(err?.message || "Lỗi khi lưu xe");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await vehicleService.deleteVehicle(deleteTarget._id);
+      setDeleteTarget(null);
+      fetchVehicles();
+    } catch {
+      // ignore
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -84,7 +136,9 @@ export default function Vehicles() {
           <h1 className="text-3xl font-bold text-gray-800">Quản lý xe</h1>
           <p className="text-gray-600 mt-1">Tổng cộng {vehicles.length} xe</p>
         </div>
-        <button className="flex items-center gap-2 px-5 py-3 bg-linear-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg hover:shadow-xl">
+        <button
+          onClick={() => { setSaveError(""); setFormModal('create'); }}
+          className="flex items-center gap-2 px-5 py-3 bg-linear-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg hover:shadow-xl">
           <Plus size={20} />
           <span className="font-medium">Thêm xe mới</span>
         </button>
@@ -159,14 +213,20 @@ export default function Vehicles() {
 
               {/* Actions */}
               <div className="flex gap-2">
-                <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors">
+                <button
+                  onClick={() => setDetailVehicle(vehicle)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors">
                   <Eye size={16} />
                   <span className="text-sm font-medium">Xem</span>
                 </button>
-                <button className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                <button
+                  onClick={() => { setSaveError(""); setFormModal(vehicle); }}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
                   <Edit size={16} />
                 </button>
-                <button className="flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors">
+                <button
+                  onClick={() => setDeleteTarget(vehicle)}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors">
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -182,6 +242,188 @@ export default function Vehicles() {
           <p className="text-gray-500 font-medium">Không tìm thấy xe nào</p>
         </div>
       )}
+
+      {/* Vehicle Form Modal */}
+      {formModal !== null && (
+        <VehicleFormModal
+          initial={typeof formModal === 'object' ? formModal : null}
+          saving={saving}
+          error={saveError}
+          onClose={() => setFormModal(null)}
+          onSubmit={handleSave}
+        />
+      )}
+
+      {/* Vehicle Detail Modal */}
+      {detailVehicle && (
+        <VehicleDetailModal
+          vehicle={detailVehicle}
+          onClose={() => setDetailVehicle(null)}
+          onEdit={() => { setDetailVehicle(null); setSaveError(''); setFormModal(detailVehicle); }}
+        />
+      )}
+
+      {/* Delete Confirm */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">Xác nhận xoá xe</h2>
+            <p className="text-sm text-gray-600">Bạn chắc chắn muốn xoá xe <strong>{deleteTarget.vehicleName}</strong>?</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Huỷ</button>
+              <button onClick={handleDelete} disabled={deleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:opacity-50">
+                {deleting ? 'Đang xoá...' : 'Xoá'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Vehicle Form Modal ─────────────────────────────────────────────────────
+const VEHICLE_TYPES = ['sedan','suv','truck','van','sport','electric','other'];
+
+function VehicleFormModal({ initial, saving, error, onClose, onSubmit }) {
+  const isEdit = !!initial;
+  const [form, setForm] = useState({
+    vehicleName: initial?.vehicleName || '',
+    vehicleType: initial?.vehicleType || 'sedan',
+    price: initial?.price || '',
+    vehicleStatus: initial ? String(initial.vehicleStatus !== false) : 'true',
+    vehicleBrands: initial?.vehicleDetail?.vehicleBrands || '',
+    vehicleColor: initial?.vehicleDetail?.vehicleColor || '',
+    vehicleLicensePlate: initial?.vehicleDetail?.vehicleLicensePlate || '',
+    vehicleYear: initial?.vehicleDetail?.vehicleYear || '',
+    vehicleSeatCount: initial?.vehicleDetail?.vehicleSeatCount || '',
+    vehicleImage: initial?.vehicleDetail?.vehicleImage || '',
+  });
+  const set = (k) => (e) => setForm(f => ({...f, [k]: e.target.value}));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg my-4">
+        <div className="flex items-center justify-between p-6 border-b">
+          <h2 className="text-lg font-semibold">{isEdit ? 'Chỉnh sửa xe' : 'Thêm xe mới'}</h2>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+        </div>
+        <form onSubmit={e => { e.preventDefault(); onSubmit(form); }} className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Tên xe *</label>
+              <input required value={form.vehicleName} onChange={set('vehicleName')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Loại xe *</label>
+              <select required value={form.vehicleType} onChange={set('vehicleType')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {VEHICLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Giá/ngày (VNĐ) *</label>
+              <input required type="number" value={form.price} onChange={set('price')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Hãng xe</label>
+              <input value={form.vehicleBrands} onChange={set('vehicleBrands')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Màu sắc</label>
+              <input value={form.vehicleColor} onChange={set('vehicleColor')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Biển số</label>
+              <input value={form.vehicleLicensePlate} onChange={set('vehicleLicensePlate')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Năm sản xuất</label>
+              <input type="number" value={form.vehicleYear} onChange={set('vehicleYear')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Số chỗ ngồi</label>
+              <input type="number" value={form.vehicleSeatCount} onChange={set('vehicleSeatCount')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Trạng thái</label>
+              <select value={form.vehicleStatus} onChange={set('vehicleStatus')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="true">Sẵn sàng</option>
+                <option value="false">Ngừng hoạt động</option>
+              </select>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold text-gray-600 mb-1">URL ảnh xe</label>
+              <input value={form.vehicleImage} onChange={set('vehicleImage')}
+                placeholder="https://..."
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Huỷ</button>
+            <button type="submit" disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+              {saving ? 'Đang lưu...' : isEdit ? 'Cập nhật' : 'Tạo xe'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Vehicle Detail Modal ───────────────────────────────────────────────────
+function VehicleDetailModal({ vehicle, onClose, onEdit }) {
+  const fmt = (v) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(v) * 1000 || 0);
+  const rows = [
+    ['Tên xe', vehicle.vehicleName],
+    ['Loại xe', vehicle.vehicleType],
+    ['Giá/ngày', fmt(vehicle.price)],
+    ['Hãng', vehicle.vehicleDetail?.vehicleBrands],
+    ['Màu', vehicle.vehicleDetail?.vehicleColor],
+    ['Biển số', vehicle.vehicleDetail?.vehicleLicensePlate],
+    ['Năm SX', vehicle.vehicleDetail?.vehicleYear],
+    ['Số chỗ', vehicle.vehicleDetail?.vehicleSeatCount],
+    ['Trạng thái', vehicle.vehicleStatus !== false ? 'Sẵn sàng' : 'Ngừng HĐ'],
+  ];
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between p-6 border-b">
+          <h2 className="text-lg font-semibold">Chi tiết xe</h2>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+        </div>
+        {vehicle.vehicleDetail?.vehicleImage && (
+          <img src={vehicle.vehicleDetail.vehicleImage} alt={vehicle.vehicleName}
+            className="w-full h-48 object-cover" />
+        )}
+        <div className="p-6 space-y-3">
+          {rows.map(([label, val]) => val != null && (
+            <div key={label} className="flex justify-between text-sm">
+              <span className="text-gray-500">{label}</span>
+              <span className="font-medium text-gray-900">{val}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end gap-3 p-6 pt-0">
+          <button onClick={onClose}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Đóng</button>
+          <button onClick={onEdit}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Chỉnh sửa</button>
+        </div>
+      </div>
     </div>
   );
 }

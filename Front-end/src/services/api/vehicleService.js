@@ -18,7 +18,7 @@ export const vehicleService = {
 
   // Update vehicle
   updateVehicle: async (id, vehicleData) => {
-    return await axiosInstance.patch(`/vehicle/${id}`, vehicleData);
+    return await axiosInstance.put(`/vehicle/${id}`, vehicleData);
   },
 
   // Delete vehicle

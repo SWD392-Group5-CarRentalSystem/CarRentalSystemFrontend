@@ -10,8 +10,9 @@ import {
   MdPending,
   MdRefresh,
   MdAccessTime,
+  MdDescription,
 } from "react-icons/md";
-import { bookingService } from "../../services/api";
+import { bookingService, paymentService } from "../../services/api";
 import { useAuthContext } from "../../context";
 
 const STATUS_TABS = [
@@ -45,6 +46,7 @@ const bookingStatusVi = {
   confirmed: "Đã xác nhận",
   vehicle_delivered: "Đã giao xe",
   in_progress: "Đang thực hiện",
+  transporting: "Đang chở khách",
   vehicle_returned: "Đã trả xe",
   completed: "Hoàn thành",
   cancelled: "Đã huỷ",
@@ -115,6 +117,42 @@ export default function DriverSchedule() {
     } catch (err) {
       showToast("error", err?.response?.data?.message || "Có lỗi xảy ra");
     } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handlePickedUp = async (bookingId) => {
+    try {
+      setActionLoading(bookingId + "_pickup");
+      await bookingService.updateBookingStatus(bookingId, "transporting");
+      showToast("success", "Đã đón khách! Đang trên đường...");
+      await fetchBookings();
+    } catch (err) {
+      showToast("error", err?.response?.data?.message || "Lỗi cập nhật trạng thái");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleEndTrip = async (booking) => {
+    const remaining = Number(booking.totalAmount) - Number(booking.depositAmount);
+    try {
+      setActionLoading(booking._id + "_end");
+      if (remaining <= 0) {
+        // Không còn tiền cần thanh toán—cập nhật thẳng lên completed
+        await bookingService.updateBookingStatus(booking._id, "completed");
+        showToast("success", "Kết thúc hành trình thành công!");
+        await fetchBookings();
+        setActionLoading(null);
+        return;
+      }
+      const res = await paymentService.createRemainingPaymentUrl(booking._id, remaining, 'driver');
+      const paymentUrl = res?.data?.data?.paymentUrl || res?.data?.paymentUrl;
+      if (!paymentUrl) throw new Error("Không tạo được link thanh toán");
+      // Chuyển sang VNPay để thanh toán số tiền còn lại
+      window.location.href = paymentUrl;
+    } catch (err) {
+      showToast("error", err?.response?.data?.message || err?.message || "Lỗi tạo thanh toán");
       setActionLoading(null);
     }
   };
@@ -275,6 +313,21 @@ export default function DriverSchedule() {
                   </div>
                 </div>
 
+                {/* Contract view */}
+                {booking.contractFileUrl && (
+                  <div className="px-6 pb-4">
+                    <a
+                      href={booking.contractFileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-sky-50 border border-sky-200 text-sky-700 rounded-xl text-sm font-semibold hover:bg-sky-100 transition-colors"
+                    >
+                      <MdDescription className="text-base" />
+                      Xem hợp đồng
+                    </a>
+                  </div>
+                )}
+
                 {/* Reject reason (if rejected) */}
                 {dsKey === "rejected" && booking.driverRejectReason && (
                   <div className="px-6 pb-4">
@@ -310,6 +363,46 @@ export default function DriverSchedule() {
                       )}
                       Đồng ý
                     </button>
+                  </div>
+                )}
+
+                {/* Trip progress buttons for in_progress / transporting bookings */}
+                {dsKey === "accepted" && ["in_progress", "transporting"].includes(booking.status) && (
+                  <div className="px-6 py-4 border-t border-gray-100">
+                    {booking.status === "in_progress" ? (
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-blue-50 rounded-xl p-4 border border-blue-200">
+                        <div>
+                          <p className="text-sm font-bold text-blue-700">Xe đã được giao — Bắt đầu đón khách</p>
+                          <p className="text-xs text-blue-500 mt-0.5">Nhấn xác nhận khi bạn đã đón khách lên xe</p>
+                        </div>
+                        <button
+                          onClick={() => handlePickedUp(booking._id)}
+                          disabled={actionLoading === booking._id + "_pickup"}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors shadow-md whitespace-nowrap disabled:opacity-50"
+                        >
+                          {actionLoading === booking._id + "_pickup" ? (
+                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : "✅"} Đã đón khách
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-emerald-50 rounded-xl p-4 border border-emerald-200">
+                        <div>
+                          <p className="text-sm font-bold text-emerald-700">Đã đón khách — Đang trên đường</p>
+                          <p className="text-xs text-emerald-600 mt-0.5">Nhấn khi bạn đã trả khách và kết thúc chuyến đi</p>
+                        </div>
+                        <button
+                          onClick={() => handleEndTrip(booking)}
+                          disabled={actionLoading === booking._id + "_end"}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-colors shadow-md whitespace-nowrap disabled:opacity-50"
+                        >
+                          {actionLoading === booking._id + "_end" ? (
+                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : "🏁"}
+                          Kết thúc hành trình
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import { useAuthContext } from "../../context/AuthContext";
-import { bookingService } from "../../services/api";
+import { useToast } from "../../context";
+import { ConfirmModal } from "../../components/common";
+import { bookingService, paymentService } from "../../services/api";
 import {
   MdHistory,
   MdArrowBack,
@@ -27,6 +29,7 @@ import {
   MdPayment,
   MdAccountBalanceWallet,
   MdReceipt,
+  MdAssignment,
 } from "react-icons/md";
 
 // Map BE status (9 loại) → 4 nhóm hiển thị
@@ -36,6 +39,7 @@ const STATUS_GROUP = {
   confirmed: "confirmed",
   vehicle_delivered: "ongoing",
   in_progress: "ongoing",
+  transporting: "ongoing",
   vehicle_returned: "ongoing",
   completed: "completed",
   cancelled: "cancelled",
@@ -70,6 +74,8 @@ const normalizeBooking = (b) => ({
   depositStatus: b.depositStatus ?? "not_paid",
   depositTransferredAt: b.depositTransferredAt ?? null,
   depositConfirmedAt: b.depositConfirmedAt ?? null,
+  updatedAt: b.updatedAt ?? null,
+  contractFileUrl: b.contractFileUrl ?? null,
   rating: null,
 });
 
@@ -120,6 +126,12 @@ const STATUS_BADGE_CONFIG = {
     text: "Đang thuê",
     bgColor: "bg-sky-100",
     textColor: "text-sky-600",
+  },
+  transporting: {
+    icon: MdAccessTime,
+    text: "Đang chở khách",
+    bgColor: "bg-violet-100",
+    textColor: "text-violet-600",
   },
   vehicle_returned: {
     icon: MdAccessTime,
@@ -203,10 +215,17 @@ StarRating.propTypes = {
 };
 
 // History Card Component
-const HistoryCard = ({ booking, index, onViewDetails, onConfirmReceive }) => {
+const HistoryCard = ({ booking, index, onViewDetails, onConfirmReceive, onReturnVehicle, onPayRemaining }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [returning, setReturning] = useState(false);
+  const [paying, setPaying] = useState(false);
+
+  // confirmModal: null | { type: 'receive' | 'return' | 'pay' }
+  const [confirmModal, setConfirmModal] = useState(null);
+
+  const isSelfDrive = booking.rentalType === "self_drive";
 
   // Tính trạng thái hiển thị thực tế:
   // with_driver + confirmed + chưa có tài xế → "awaiting_driver"
@@ -223,12 +242,34 @@ const HistoryCard = ({ booking, index, onViewDetails, onConfirmReceive }) => {
 
   const handleConfirmReceive = async () => {
     if (confirming) return;
-    if (!window.confirm("Xác nhận bạn đã nhận được xe?")) return;
     try {
       setConfirming(true);
       await onConfirmReceive(booking._id ?? booking.id);
     } finally {
       setConfirming(false);
+      setConfirmModal(null);
+    }
+  };
+
+  const handleReturnVehicle = async () => {
+    if (returning) return;
+    try {
+      setReturning(true);
+      await onReturnVehicle(booking._id ?? booking.id);
+    } finally {
+      setReturning(false);
+      setConfirmModal(null);
+    }
+  };
+
+  const handlePayRemaining = async () => {
+    if (paying) return;
+    try {
+      setPaying(true);
+      await onPayRemaining(booking._id ?? booking.id, booking.totalPrice - booking.depositAmount);
+    } finally {
+      setPaying(false);
+      setConfirmModal(null);
     }
   };
 
@@ -404,24 +445,75 @@ const HistoryCard = ({ booking, index, onViewDetails, onConfirmReceive }) => {
               </div>
             </div>
 
-            {/* Nhận xe banner */}
-            {booking.status === "vehicle_delivered" && (
-              <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
-                    <MdDirectionsCar className="text-blue-500 text-xl" />
-                  </div>
+            {/* Hợp đồng — self_drive sau khi staff upload */}
+            {isSelfDrive && booking.contractFileUrl && ![
+              "pending", "awaiting_deposit_confirmation", "confirmed"
+            ].includes(booking.status) && (
+              <div className="mt-3 flex items-center gap-2">
+                <a
+                  href={booking.contractFileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 text-sky-600 border border-sky-200 rounded-xl hover:bg-sky-100 transition-colors text-xs font-semibold"
+                >
+                  <MdAssignment className="text-base" />
+                  Xem hợp đồng
+                </a>
+              </div>
+            )}
+
+            {/* Trả xe action — self_drive in_progress */}
+            {isSelfDrive && booking.status === "in_progress" && (
+              <div className="mt-3 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100">
+                <div className="flex items-center gap-2.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                  <p className="text-sm font-semibold text-orange-700">Chuyến đi đang diễn ra</p>
+                </div>
+                <button
+                  onClick={() => setConfirmModal({ type: 'return' })}
+                  disabled={returning}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white rounded-xl font-bold text-sm transition-all shadow-sm shadow-orange-500/30 disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
+                >
+                  <MdCheckCircle className="text-base" />
+                  {returning ? "Đang xử lý..." : "Trả xe"}
+                </button>
+              </div>
+            )}
+
+            {/* Thanh toán còn lại action — self_drive vehicle_returned */}
+            {isSelfDrive && booking.status === "vehicle_returned" && (
+              <div className="mt-3 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100">
+                <div className="flex items-center gap-2.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <div>
-                    <p className="text-sm font-bold text-blue-700">Xe đã được xuất — nhấn xác nhận khi bạn đã nhận xe!</p>
-                    <p className="text-xs text-blue-500 mt-0.5">Nhân viên đã giao xe cho bạn, hãy xác nhận để bắt đầu chuyến đi.</p>
+                    <p className="text-sm font-semibold text-emerald-700">Xe đã trả — thanh toán phần còn lại</p>
+                    <p className="text-xs text-emerald-500">{new Intl.NumberFormat("vi-VN").format(booking.totalPrice - booking.depositAmount)} ₫</p>
                   </div>
                 </div>
                 <button
-                  onClick={handleConfirmReceive}
-                  disabled={confirming}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
+                  onClick={() => setConfirmModal({ type: 'pay' })}
+                  disabled={paying}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-all shadow-sm shadow-emerald-500/30 disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
                 >
-                  <MdCheckCircle className="text-lg" />
+                  <MdPayment className="text-base" />
+                  {paying ? "Đang chuyển..." : "Thanh toán"}
+                </button>
+              </div>
+            )}
+
+            {/* Nhận xe action */}
+            {booking.status === "vehicle_delivered" && (
+              <div className="mt-3 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-100">
+                <div className="flex items-center gap-2.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+                  <p className="text-sm font-semibold text-sky-700">Xe đã được giao — nhấn xác nhận khi đã nhận xe</p>
+                </div>
+                <button
+                  onClick={() => setConfirmModal({ type: 'receive' })}
+                  disabled={confirming}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-sky-500 hover:bg-sky-600 active:bg-sky-700 text-white rounded-xl font-bold text-sm transition-all shadow-sm shadow-sky-500/30 disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
+                >
+                  <MdCheckCircle className="text-base" />
                   {confirming ? "Đang xử lý..." : "Đã nhận xe"}
                 </button>
               </div>
@@ -463,11 +555,52 @@ const HistoryCard = ({ booking, index, onViewDetails, onConfirmReceive }) => {
           </div>
         </div>
       </div>
+
+      {/* Confirm: Nhận xe */}
+      <ConfirmModal
+        open={confirmModal?.type === 'receive'}
+        variant="info"
+        icon="🚗"
+        title="Xác nhận nhận xe"
+        description="Bạn đã nhận xe từ nhân viên chưa? Sau khi xác nhận, chương trình sẽ bắt đầu tính thời gian thuê."
+        confirmLabel="Đã nhận xe"
+        onConfirm={handleConfirmReceive}
+        onCancel={() => setConfirmModal(null)}
+        loading={confirming}
+      />
+
+      {/* Confirm: Trả xe */}
+      <ConfirmModal
+        open={confirmModal?.type === 'return'}
+        variant="warning"
+        icon="🏠"
+        title="Xác nhận trả xe"
+        description="Bạn đã trả xe về cửa hàng chưa? Sau khi xác nhận, đơn sẽ chuyển sang trạng thái chờ thanh toán phần còn lại."
+        confirmLabel="Đã trả xe"
+        onConfirm={handleReturnVehicle}
+        onCancel={() => setConfirmModal(null)}
+        loading={returning}
+      />
+
+      {/* Confirm: Thanh toán */}
+      <ConfirmModal
+        open={confirmModal?.type === 'pay'}
+        variant="success"
+        icon="💳"
+        title="Thanh toán phần còn lại"
+        description={`Bạn sẽ được chuyển sang trang thanh toán VNPay. Số tiền cần thanh toán: ${new Intl.NumberFormat("vi-VN").format(booking.totalPrice - booking.depositAmount)} ₫.`}
+        confirmLabel="Tiếp tục thanh toán"
+        onConfirm={handlePayRemaining}
+        onCancel={() => setConfirmModal(null)}
+        loading={paying}
+      />
     </div>
   );
 };
 
 HistoryCard.propTypes = {
+  onReturnVehicle: PropTypes.func,
+  onPayRemaining: PropTypes.func,
   booking: PropTypes.shape({
     _id: PropTypes.string,
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -580,6 +713,8 @@ const PaymentCard = ({ booking, index }) => {
     ts ? new Date(ts).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : "";
 
   const depositCfg = DEPOSIT_STATUS_CONFIG[booking.depositStatus] ?? DEPOSIT_STATUS_CONFIG.not_paid;
+  const remaining = booking.totalPrice - booking.depositAmount;
+  const isCompleted = booking.status === "completed";
 
   return (
     <div
@@ -613,36 +748,63 @@ const PaymentCard = ({ booking, index }) => {
             </span>
           </div>
 
-          {/* Payment details grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="flex flex-col">
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Ngày thanh toán</span>
-              <span className="text-sm font-semibold text-gray-800">{fmtDate(booking.depositTransferredAt)}</span>
-              {booking.depositTransferredAt && (
-                <span className="text-xs text-gray-400">{fmtTime(booking.depositTransferredAt)}</span>
-              )}
+          {/* ===== ROW 1: Deposit payment ===== */}
+          <div className="rounded-xl border border-sky-100 bg-sky-50 p-3">
+            <p className="text-[10px] font-bold text-sky-600 uppercase tracking-wider mb-2">Đặt cọc</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="flex flex-col">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Ngày thanh toán</span>
+                <span className="text-sm font-semibold text-gray-800">{fmtDate(booking.depositTransferredAt)}</span>
+                {booking.depositTransferredAt && (
+                  <span className="text-xs text-gray-400">{fmtTime(booking.depositTransferredAt)}</span>
+                )}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Số tiền cọc</span>
+                <span className="text-sm font-bold text-sky-600">{fmt(booking.depositAmount)} ₫</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Tổng tiền thuê</span>
+                <span className="text-sm font-bold text-gray-900">{fmt(booking.totalPrice)} ₫</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Thời gian thuê</span>
+                <span className="text-sm text-gray-700">
+                  {fmtDate(booking.startDate)} → {fmtDate(booking.endDate)}
+                </span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Tiền cọc</span>
-              <span className="text-sm font-bold text-sky-600">{fmt(booking.depositAmount)} ₫</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Tổng tiền thuê</span>
-              <span className="text-sm font-bold text-gray-900">{fmt(booking.totalPrice)} ₫</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Thời gian thuê</span>
-              <span className="text-sm text-gray-700">
-                {fmtDate(booking.startDate)} → {fmtDate(booking.endDate)}
-              </span>
-            </div>
+            {booking.depositConfirmedAt && (
+              <div className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 rounded-lg px-3 py-1.5 mt-2">
+                <MdCheckCircle className="text-sm" />
+                Xác nhận lúc {fmtDate(booking.depositConfirmedAt)} {fmtTime(booking.depositConfirmedAt)}
+              </div>
+            )}
           </div>
 
-          {/* Confirmed at */}
-          {booking.depositConfirmedAt && (
-            <div className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 rounded-lg px-3 py-1.5">
-              <MdCheckCircle className="text-sm" />
-              Xác nhận lúc {fmtDate(booking.depositConfirmedAt)} {fmtTime(booking.depositConfirmedAt)}
+          {/* ===== ROW 2: Remaining payment (chỉ hiện khi completed và có tiền còn lại) ===== */}
+          {isCompleted && remaining > 0 && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-2">Thanh toán phần còn lại</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Ngày thanh toán</span>
+                  <span className="text-sm font-semibold text-gray-800">{fmtDate(booking.updatedAt)}</span>
+                  {booking.updatedAt && (
+                    <span className="text-xs text-gray-400">{fmtTime(booking.updatedAt)}</span>
+                  )}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Số tiền còn lại</span>
+                  <span className="text-sm font-bold text-emerald-600">{fmt(remaining)} ₫</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Trạng thái</span>
+                  <span className="text-sm font-bold text-emerald-600 flex items-center gap-1">
+                    <MdCheckCircle className="text-sm" /> Đã thanh toán
+                  </span>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -658,6 +820,8 @@ PaymentCard.propTypes = {
 
 const History = () => {
   const { user } = useAuthContext();
+  const navigate = useNavigate();
+  const toast = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState(null);
@@ -692,12 +856,30 @@ const History = () => {
     return matchesFilter && matchesSearch;
   });
 
-  const handleConfirmReceive = async (bookingId) => {
-    await bookingService.updateBookingStatus(bookingId, "in_progress");
-    // Re-fetch bookings to update UI
+  const refreshBookings = async () => {
     const res = await bookingService.getBookingsByCustomer(user._id);
     const raw = res?.data ?? res ?? [];
     setBookings(Array.isArray(raw) ? raw.map(normalizeBooking) : []);
+  };
+
+  const handleConfirmReceive = async (bookingId) => {
+    await bookingService.updateBookingStatus(bookingId, "in_progress");
+    await refreshBookings();
+  };
+
+  const handleReturnVehicle = async (bookingId) => {
+    await bookingService.updateBookingStatus(bookingId, "vehicle_returned");
+    await refreshBookings();
+  };
+
+  const handlePayRemaining = async (bookingId, remainingAmount) => {
+    const res = await paymentService.createRemainingPaymentUrl(bookingId, remainingAmount, 'customer');
+    const paymentUrl = res?.paymentUrl ?? res?.data?.paymentUrl;
+    if (paymentUrl) {
+      window.location.href = paymentUrl;
+    } else {
+      toast.error("Không tạo được link thanh toán. Vui lòng thử lại.");
+    }
   };
 
   if (isLoading) {
@@ -874,7 +1056,7 @@ const History = () => {
               <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
                 <MdAccountBalanceWallet className="text-6xl text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 font-medium text-lg">Chưa có giao dịch nào</p>
-                <p className="text-gray-400 text-sm mt-1">Các đơn đã thanh toán cọc sẽ hiện ở đây</p>
+                <p className="text-gray-400 text-sm mt-1">Các đơn đã thanh toán sẽ hiện ở đây</p>
               </div>
             ) : (
               bookings
@@ -898,7 +1080,14 @@ const History = () => {
             {filteredBookings.length > 0 ? (
               <div className="space-y-6">
                 {filteredBookings.map((booking, index) => (
-                  <HistoryCard key={booking._id ?? booking.id} booking={booking} index={index} onConfirmReceive={handleConfirmReceive} />
+                  <HistoryCard
+                    key={booking._id ?? booking.id}
+                    booking={booking}
+                    index={index}
+                    onConfirmReceive={handleConfirmReceive}
+                    onReturnVehicle={handleReturnVehicle}
+                    onPayRemaining={handlePayRemaining}
+                  />
                 ))}
               </div>
             ) : (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   MdDirectionsCar,
@@ -19,6 +19,8 @@ import {
   MdElectricCar,
   MdPalette,
   MdBolt,
+  MdChevronLeft,
+  MdChevronRight,
 } from "react-icons/md";
 import { useAuthContext } from "../../context/AuthContext";
 import { bookingService, profileService, paymentService } from "../../services/api";
@@ -32,6 +34,8 @@ const RENTAL_TYPES = {
 };
 
 const DRIVER_FEE_PER_DAY = 500000;
+
+const STORE_ADDRESS = "18 Đường Số 3, Phường An Khánh, Thành phố Thủ Đức, TP.HCM";
 
 const POPULAR_LOCATIONS = [
   "Sân bay Tân Sơn Nhất, TP.HCM",
@@ -225,7 +229,7 @@ const CostBreakdown = ({ vehicle, rentalDays, rentalType }) => {
   const driverCost =
     rentalType === RENTAL_TYPES.WITH_DRIVER ? DRIVER_FEE_PER_DAY * rentalDays : 0;
   const totalAmount = vehicleCost + driverCost;
-  const depositAmount = Math.round(totalAmount * 0.1);
+  const depositAmount = Math.round(totalAmount * 0.5);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-5">
@@ -251,7 +255,7 @@ const CostBreakdown = ({ vehicle, rentalDays, rentalType }) => {
         </div>
         <div className="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-xl p-3">
           <span className="flex items-center gap-1.5 text-amber-700 text-sm font-semibold">
-            <MdInfo className="text-amber-500" /> Đặt cọc 10%
+            <MdInfo className="text-amber-500" /> Đặt cọc 50%
           </span>
           <span className="font-black text-amber-700">{formatCurrency(depositAmount)}</span>
         </div>
@@ -287,10 +291,238 @@ const calcRentalDays = (start, end) => {
 
 const today = () => new Date().toISOString().split("T")[0];
 
+// ===================== CALENDAR PICKER =====================
+const WEEKDAYS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+const MONTHS_VI = ["Tháng 1","Tháng 2","Tháng 3","Tháng 4","Tháng 5","Tháng 6","Tháng 7","Tháng 8","Tháng 9","Tháng 10","Tháng 11","Tháng 12"];
+
+/**
+ * CalendarPicker — custom inline calendar dropdown
+ * @param {string}   value     current selected date in dd/mm/yyyy
+ * @param {Function} onChange  called with dd/mm/yyyy
+ * @param {string}   minISO    minimum selectable date in yyyy-mm-dd
+ * @param {string}   maxISO    optional maximum date in yyyy-mm-dd
+ * @param {Function} onClose   called when picker should close
+ * @param {string}   startISO  highlight range start (yyyy-mm-dd)
+ * @param {string}   endISO    highlight range end (yyyy-mm-dd)
+ */
+const CalendarPicker = ({ value, onChange, minISO, maxISO, onClose, startISO, endISO }) => {
+  const todayISO = today();
+  const effectiveMin = minISO || todayISO;
+
+  // Derive initial view month from current value or today
+  const initView = () => {
+    const iso = value ? toISO(value) : todayISO;
+    const d = new Date(iso + "T00:00:00");
+    return { year: d.getFullYear(), month: d.getMonth() }; // month 0-indexed
+  };
+  const [view, setView] = useState(initView);
+
+  const selectedISO = value ? toISO(value) : null;
+
+  const prevMonth = () =>
+    setView(({ year, month }) =>
+      month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 }
+    );
+  const nextMonth = () =>
+    setView(({ year, month }) =>
+      month === 11 ? { year: year + 1, month: 0 } : { year, month: month + 1 }
+    );
+
+  // Build calendar grid — 6 rows × 7 cols
+  const cells = useMemo(() => {
+    const firstDay = new Date(view.year, view.month, 1).getDay(); // 0=Sun
+    const daysInMonth = new Date(view.year, view.month + 1, 0).getDate();
+    const arr = [];
+    for (let i = 0; i < firstDay; i++) arr.push(null);
+    for (let d = 1; d <= daysInMonth; d++) arr.push(d);
+    return arr;
+  }, [view]);
+
+  const isoForDay = (d) => {
+    const mm = String(view.month + 1).padStart(2, "0");
+    const dd = String(d).padStart(2, "0");
+    return `${view.year}-${mm}-${dd}`;
+  };
+
+  const pickerRef = useRef(null);
+  useEffect(() => {
+    const handler = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={pickerRef}
+      className="absolute z-30 mt-1 bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 w-72"
+      style={{ animation: "modalScale 0.22s cubic-bezier(0.16,1,0.3,1) both" }}
+      onMouseDown={(e) => e.preventDefault()} // prevent input blur
+    >
+      {/* Month navigation */}
+      <div className="flex items-center justify-between mb-3">
+        <button
+          type="button"
+          onClick={prevMonth}
+          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-600 transition-colors"
+        >
+          <MdChevronLeft className="text-xl" />
+        </button>
+        <span className="text-sm font-bold text-gray-800">
+          {MONTHS_VI[view.month]} {view.year}
+        </span>
+        <button
+          type="button"
+          onClick={nextMonth}
+          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-600 transition-colors"
+        >
+          <MdChevronRight className="text-xl" />
+        </button>
+      </div>
+
+      {/* Weekday headers */}
+      <div className="grid grid-cols-7 mb-1">
+        {WEEKDAYS.map((w) => (
+          <div key={w} className="text-center text-[10px] font-bold text-gray-400 py-1">{w}</div>
+        ))}
+      </div>
+
+      {/* Day cells */}
+      <div className="grid grid-cols-7 gap-y-1">
+        {cells.map((d, i) => {
+          if (!d) return <div key={`e-${i}`} />;
+          const iso = isoForDay(d);
+          const disabled = iso < effectiveMin || (maxISO && iso > maxISO);
+          const isSelected = iso === selectedISO;
+          const isToday = iso === todayISO;
+          const inRange =
+            startISO && endISO && iso > startISO && iso < endISO;
+          const isRangeStart = startISO && iso === startISO;
+          const isRangeEnd = endISO && iso === endISO;
+
+          return (
+            <button
+              key={iso}
+              type="button"
+              disabled={disabled}
+              onClick={() => { onChange(fromISO(iso)); onClose(); }}
+              className={[
+                "h-8 w-full rounded-xl text-xs font-semibold transition-all",
+                disabled ? "text-gray-300 cursor-not-allowed" : "cursor-pointer",
+                isSelected
+                  ? "bg-sky-500 text-white shadow-md shadow-sky-200"
+                  : isRangeStart || isRangeEnd
+                  ? "bg-sky-400 text-white"
+                  : inRange
+                  ? "bg-sky-100 text-sky-700"
+                  : isToday && !disabled
+                  ? "ring-2 ring-sky-400 text-sky-600"
+                  : !disabled
+                  ? "hover:bg-sky-50 text-gray-700"
+                  : "",
+              ].join(" ")}
+            >
+              {d}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Footer shortcut */}
+      <button
+        type="button"
+        disabled={todayISO < effectiveMin}
+        onClick={() => { if (todayISO >= effectiveMin) { onChange(fromISO(todayISO)); onClose(); }}}
+        className="mt-3 w-full text-xs font-semibold text-sky-500 hover:text-sky-600 hover:underline disabled:text-gray-300 disabled:no-underline disabled:cursor-not-allowed transition-colors"
+      >
+        Hôm nay
+      </button>
+    </div>
+  );
+};
+
+/**
+ * DateField — text input + calendar icon toggle
+ */
+const DateField = ({ label, value, onChange, error, minISO, maxISO, rangeStart, rangeEnd }) => {
+  const [open, setOpen] = useState(false);
+  const [localError, setLocalError] = useState("");
+  const wrapRef = useRef(null);
+  const close = useCallback(() => setOpen(false), []);
+
+  const handleTextChange = (e) => {
+    const formatted = autoFormatDate(e.target.value);
+    // Validate only when the date is fully typed (dd/mm/yyyy = 10 chars)
+    if (formatted.length === 10) {
+      const iso = toISO(formatted);
+      const d = new Date(iso + "T00:00:00");
+      if (isNaN(d.getTime())) {
+        setLocalError("Ngày không hợp lệ");
+        onChange(formatted); // keep raw input so user can fix
+        return;
+      }
+      if (minISO && iso < minISO) {
+        setLocalError("Không thể chọn ngày trong quá khứ");
+        onChange(""); // reject past date immediately
+        return;
+      }
+      if (maxISO && iso > maxISO) {
+        setLocalError("Ngày không hợp lệ");
+        onChange("");
+        return;
+      }
+      setLocalError("");
+    } else {
+      setLocalError("");
+    }
+    onChange(formatted);
+  };
+
+  const displayError = localError || error;
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <p className="text-xs text-gray-500 font-semibold mb-1.5 uppercase tracking-wide">{label}</p>
+      <div className="relative flex items-center">
+        <input
+          type="text"
+          placeholder="dd/mm/yyyy"
+          maxLength={10}
+          value={value}
+          onChange={handleTextChange}
+          className={`w-full bg-gray-50 border rounded-xl px-4 py-3 pr-11 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition ${displayError ? "border-red-400 bg-red-50" : "border-gray-200"}`}
+        />
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className={`absolute right-3 w-6 h-6 flex items-center justify-center rounded-lg transition-colors ${open ? "text-sky-500 bg-sky-50" : "text-gray-400 hover:text-sky-500 hover:bg-sky-50"}`}
+          tabIndex={-1}
+        >
+          <MdCalendarToday className="text-base" />
+        </button>
+      </div>
+      {displayError && <p className="text-red-500 text-xs mt-1">{displayError}</p>}
+      {open && (
+        <CalendarPicker
+          value={value}
+          onChange={(v) => { setLocalError(""); onChange(v); }}
+          minISO={minISO}
+          maxISO={maxISO}
+          onClose={close}
+          startISO={rangeStart ? toISO(rangeStart) : null}
+          endISO={rangeEnd ? toISO(rangeEnd) : null}
+        />
+      )}
+    </div>
+  );
+};
+
 const validateStep1 = (form) => {
   const errors = {};
   if (!form.rentalType) errors.rentalType = "Vui lòng chọn hình thức thuê xe";
   if (!form.startDate) errors.startDate = "Vui lòng chọn ngày nhận xe";
+  else if (toISO(form.startDate) < today()) errors.startDate = "Ngày nhận xe không thể là ngày trong quá khứ";
   if (!form.endDate) errors.endDate = "Vui lòng chọn ngày trả xe";
   if (form.startDate && form.endDate && toISO(form.endDate) <= toISO(form.startDate))
     errors.endDate = "Ngày trả xe phải sau ngày nhận";
@@ -377,7 +609,7 @@ const Booking = () => {
     const vehicleCost = vehicle.price * 1000 * rentalDays;
     const driverCost = form.rentalType === RENTAL_TYPES.WITH_DRIVER ? DRIVER_FEE_PER_DAY * rentalDays : 0;
     const totalAmount = vehicleCost + driverCost;
-    const depositAmount = Math.round(totalAmount * 0.1);
+    const depositAmount = Math.round(totalAmount * 0.5);
     return { vehicleCost, driverCost, totalAmount, depositAmount };
   }, [vehicle, rentalDays, form.rentalType]);
 
@@ -539,30 +771,29 @@ const Booking = () => {
             <MdCalendarToday className="text-sky-500" /> Thời gian thuê <span className="text-red-500">*</span>
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-gray-500 font-semibold mb-1.5 uppercase tracking-wide">Ngày nhận xe</p>
-              <input
-                type="text"
-                placeholder="dd/mm/yyyy"
-                maxLength={10}
-                value={form.startDate}
-                onChange={(e) => updateField("startDate", autoFormatDate(e.target.value))}
-                className={`w-full bg-gray-50 border rounded-xl px-4 py-3 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition ${errors.startDate ? "border-red-400 bg-red-50" : "border-gray-200"}`}
-              />
-              {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>}
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 font-semibold mb-1.5 uppercase tracking-wide">Ngày trả xe</p>
-              <input
-                type="text"
-                placeholder="dd/mm/yyyy"
-                maxLength={10}
-                value={form.endDate}
-                onChange={(e) => updateField("endDate", autoFormatDate(e.target.value))}
-                className={`w-full bg-gray-50 border rounded-xl px-4 py-3 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition ${errors.endDate ? "border-red-400 bg-red-50" : "border-gray-200"}`}
-              />
-              {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate}</p>}
-            </div>
+            <DateField
+              label="Ngày nhận xe"
+              value={form.startDate}
+              onChange={(v) => {
+                updateField("startDate", v);
+                // clear end date if it's no longer after start
+                if (form.endDate && toISO(form.endDate) <= toISO(v))
+                  updateField("endDate", "");
+              }}
+              error={errors.startDate}
+              minISO={today()}
+              rangeStart={form.startDate}
+              rangeEnd={form.endDate}
+            />
+            <DateField
+              label="Ngày trả xe"
+              value={form.endDate}
+              onChange={(v) => updateField("endDate", v)}
+              error={errors.endDate}
+              minISO={(() => { const d = new Date(toISO(form.startDate)+"T00:00:00"); if (!form.startDate || isNaN(d.getTime())) return today(); d.setDate(d.getDate()+1); return d.toISOString().split("T")[0]; })()}
+              rangeStart={form.startDate}
+              rangeEnd={form.endDate}
+            />
           </div>
           {form.startDate && form.endDate && toISO(form.endDate) > toISO(form.startDate) && (
             <div className="mt-3 flex items-center gap-2 bg-sky-50 border border-sky-200 rounded-xl px-4 py-2.5 text-sky-700 text-sm font-semibold">
@@ -577,6 +808,28 @@ const Booking = () => {
           <label className="flex items-center gap-1.5 text-gray-800 font-bold mb-3">
             <MdLocationOn className="text-sky-500" /> Địa điểm nhận xe <span className="text-red-500">*</span>
           </label>
+
+          {/* Gợi ý nhận xe tại cửa hàng — chỉ hiện khi self_drive */}
+          {form.rentalType === RENTAL_TYPES.SELF_DRIVE && (
+            <button
+              type="button"
+              onClick={() => { updateField("pickupLocation", STORE_ADDRESS); setShowLocSuggestions(false); }}
+              className={`w-full mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all text-sm font-semibold ${
+                form.pickupLocation === STORE_ADDRESS
+                  ? "border-sky-500 bg-sky-500 text-white shadow-md shadow-sky-200"
+                  : "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 hover:border-sky-400"
+              }`}
+            >
+              <MdLocationOn className="text-base shrink-0" />
+              <span className="text-left">
+                <span className="block text-xs font-bold uppercase tracking-wide opacity-75 mb-0.5">
+                  {form.pickupLocation === STORE_ADDRESS ? "✓ Đã chọn" : "Địa chỉ cửa hàng"}
+                </span>
+                {STORE_ADDRESS}
+              </span>
+            </button>
+          )}
+
           <input
             type="text"
             placeholder="Nhập hoặc chọn địa điểm nhận xe..."
@@ -611,6 +864,28 @@ const Booking = () => {
           <label className="flex items-center gap-1.5 text-gray-800 font-bold mb-3">
             <MdLocationOn className="text-emerald-500" /> Địa điểm trả xe <span className="text-red-500">*</span>
           </label>
+
+          {/* Gợi ý trả xe tại cửa hàng — chỉ hiện khi self_drive */}
+          {form.rentalType === RENTAL_TYPES.SELF_DRIVE && (
+            <button
+              type="button"
+              onClick={() => { updateField("dropoffLocation", STORE_ADDRESS); setShowDropoffSuggestions(false); }}
+              className={`w-full mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all text-sm font-semibold ${
+                form.dropoffLocation === STORE_ADDRESS
+                  ? "border-emerald-500 bg-emerald-500 text-white shadow-md shadow-emerald-200"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400"
+              }`}
+            >
+              <MdLocationOn className="text-base shrink-0" />
+              <span className="text-left">
+                <span className="block text-xs font-bold uppercase tracking-wide opacity-75 mb-0.5">
+                  {form.dropoffLocation === STORE_ADDRESS ? "✓ Đã chọn" : "Địa chỉ cửa hàng"}
+                </span>
+                {STORE_ADDRESS}
+              </span>
+            </button>
+          )}
+
           <input
             type="text"
             placeholder="Nhập hoặc chọn địa điểm trả xe..."
@@ -712,14 +987,14 @@ const Booking = () => {
             <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Ngày nhận</span>
             <p className="text-gray-800 font-bold mt-1.5 flex items-center gap-2">
               <MdCalendarToday className="text-sky-500" />
-              {new Date(form.startDate).toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })}
+              {new Date(toISO(form.startDate) + "T00:00:00").toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })}
             </p>
           </div>
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
             <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Ngày trả</span>
             <p className="text-gray-800 font-bold mt-1.5 flex items-center gap-2">
               <MdCalendarToday className="text-sky-500" />
-              {new Date(form.endDate).toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })}
+              {new Date(toISO(form.endDate) + "T00:00:00").toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })}
             </p>
           </div>
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
@@ -770,7 +1045,7 @@ const Booking = () => {
         <MdInfo className="inline mr-1" />
         Bằng việc xác nhận đặt xe, bạn đồng ý với{" "}
         <span className="underline cursor-pointer font-semibold">Điều khoản dịch vụ</span> và{" "}
-        <span className="underline cursor-pointer font-semibold">Chính sách hủy</span> của chúng tôi. Khoản đặt cọc 30% cần được thanh toán để xác nhận đơn.
+        <span className="underline cursor-pointer font-semibold">Chính sách hủy</span> của chúng tôi. Khoản đặt cọc 50% cần được thanh toán để xác nhận đơn.
       </div>
     </div>
   );

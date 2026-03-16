@@ -77,4 +77,15 @@ export const bookingService = {
   driverRejectBooking: async (bookingId, driverId, reason = '') => {
     return await axiosInstance.patch(`/booking/${bookingId}/driver-reject`, { driverId, reason });
   },
+
+  // Receive vehicle + upload contract (multipart/form-data)
+  // contractFile: File, receiverRole: 'driver' | 'customer'
+  receiveVehicle: async (bookingId, contractFile, receiverRole) => {
+    const formData = new FormData();
+    formData.append('contractFile', contractFile);
+    formData.append('receiverRole', receiverRole);
+    return await axiosInstance.patch(`/booking/${bookingId}/receive-vehicle`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };

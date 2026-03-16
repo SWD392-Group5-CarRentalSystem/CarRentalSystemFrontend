@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
-import { MdCheckCircle, MdCancel, MdHistory, MdHome, MdDirectionsCar } from "react-icons/md";
+import { MdCheckCircle, MdCancel, MdHome, MdReceipt, MdCalendarToday, MdArrowForward } from "react-icons/md";
 
 const RESPONSE_CODES = {
   "00": "Giao dịch thành công",
@@ -18,158 +18,174 @@ const RESPONSE_CODES = {
   "99": "Lỗi không xác định.",
 };
 
-const formatCurrency = (amount) =>
-  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
+const fmt = (n) =>
+  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
+
+const getRedirectPath = (isRemaining, role) => {
+  if (!isRemaining) return "/history";
+  if (role === "customer") return "/history";
+  if (role === "staff") return "/staff/bookings";
+  return "/driver/schedule";
+};
+
+const getRedirectLabel = (isRemaining, role) => {
+  if (!isRemaining) return "Lịch sử đặt xe";
+  if (role === "customer") return "Lịch sử đặt xe";
+  if (role === "staff") return "Quản lý đặt xe";
+  return "Lịch phân công";
+};
 
 export default function PaymentResult() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
 
-  const success = params.get("success") === "true";
-  const responseCode = params.get("responseCode") || "99";
-  const bookingId = params.get("bookingId") || "";
+  const success       = params.get("success") === "true";
+  const responseCode  = params.get("responseCode") || "99";
+  const bookingId     = params.get("bookingId") || "";
   const transactionNo = params.get("transactionNo") || "";
-  const amount = Number(params.get("amount") || "0");
+  const amount        = Number(params.get("amount") || "0");
+  const isRemaining   = params.get("paymentType") === "remaining";
+  const payerRole     = params.get("role") || "customer";
+
+  const redirectPath  = getRedirectPath(isRemaining, payerRole);
+  const redirectLabel = getRedirectLabel(isRemaining, payerRole);
 
   const [countdown, setCountdown] = useState(10);
 
-  // Đếm ngược 10s nếu thành công
   useEffect(() => {
     if (!success) return;
-    const timer = setInterval(() => {
-      setCountdown((c) => (c <= 1 ? 0 : c - 1));
-    }, 1000);
-    return () => clearInterval(timer);
+    const t = setInterval(() => setCountdown((c) => (c <= 1 ? 0 : c - 1)), 1000);
+    return () => clearInterval(t);
   }, [success]);
 
-  // Navigate khi countdown về 0
   useEffect(() => {
-    if (success && countdown === 0) {
-      navigate("/history");
-    }
-  }, [countdown, success, navigate]);
+    if (success && countdown === 0) navigate(redirectPath);
+  }, [countdown, success, navigate, redirectPath]);
+
+  const Row = ({ icon: Icon, label, value, valueClass = "text-gray-800" }) => (
+    <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+      <span className="flex items-center gap-2 text-gray-400 text-sm">
+        {Icon && <Icon className="text-base shrink-0" />}
+        {label}
+      </span>
+      <span className={`font-semibold text-sm font-mono ${valueClass}`}>{value}</span>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-sky-50 via-white to-indigo-50 pt-20 px-4">
-      <div className="max-w-lg mx-auto">
-        {success ? (
-          /* ===== SUCCESS ===== */
-          <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
-            {/* Header */}
-            <div className="bg-linear-to-r from-emerald-500 to-teal-500 px-8 py-10 text-center text-white">
-              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MdCheckCircle className="text-5xl text-white" />
-              </div>
-              <h1 className="text-2xl font-black mb-1">Thanh toán thành công!</h1>
-              <p className="text-emerald-100 text-sm">Đặt cọc của bạn đã được xác nhận</p>
-            </div>
-
-            {/* Details */}
-            <div className="p-8 space-y-4">
-              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 space-y-3">
-                {amount > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500 text-sm">Số tiền đã thanh toán</span>
-                    <span className="font-black text-emerald-600 text-lg">{formatCurrency(amount)}</span>
-                  </div>
-                )}
-                {transactionNo && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500 text-sm">Mã giao dịch VNPay</span>
-                    <span className="font-mono font-semibold text-gray-800 text-sm">{transactionNo}</span>
-                  </div>
-                )}
-                {bookingId && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500 text-sm">Mã đặt xe</span>
-                    <span className="font-mono font-semibold text-gray-800 text-sm">
-                      {bookingId.slice(-8).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500 text-sm">Trạng thái đặt xe</span>
-                  <span className="font-semibold text-emerald-600">Đã xác nhận ✓</span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50 flex items-center justify-center px-4 py-10">
+      {success ? (
+        /* ══════════════ SUCCESS ══════════════ */
+        <div className="w-full max-w-sm">
+          {/* Icon + heading */}
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="mb-5">
+              <div className="w-24 h-24 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
+                <div className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center shadow-xl shadow-emerald-500/40">
+                  <MdCheckCircle className="text-4xl text-white" />
                 </div>
               </div>
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">Thanh toán thành công!</h1>
+            <p className="text-gray-400 text-sm mt-1.5">
+              {isRemaining ? "Thanh toán phần còn lại đã hoàn tất" : "Đặt cọc của bạn đã được xác nhận"}
+            </p>
+          </div>
 
-              <div className="bg-sky-50 border border-sky-100 rounded-xl p-4 text-center">
-                <p className="text-sky-700 text-sm">
-                  Chuyển sang lịch sử đặt xe sau{" "}
-                  <span className="font-black text-sky-600 text-base">{countdown}s</span>
+          {/* Card */}
+          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+            {/* Amount banner */}
+            {amount > 0 && (
+              <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-5 text-center">
+                <p className="text-emerald-100 text-[11px] font-semibold uppercase tracking-widest mb-1">Số tiền thanh toán</p>
+                <p className="text-white text-3xl font-black">{fmt(amount)}</p>
+              </div>
+            )}
+
+            {/* Info rows */}
+            <div className="px-6 pt-1 pb-0">
+              {transactionNo && <Row icon={MdReceipt} label="Mã giao dịch VNPay" value={transactionNo} />}
+              {bookingId && <Row icon={MdCalendarToday} label="Mã đặt xe" value={bookingId.slice(-8).toUpperCase()} />}
+              <Row
+                label="Trạng thái"
+                value={isRemaining ? "✔ Hoàn thành" : "✔ Đã xác nhận"}
+                valueClass="text-emerald-600 font-bold font-sans"
+              />
+            </div>
+
+            {/* Countdown + buttons */}
+            <div className="px-6 pb-6 pt-4 space-y-3">
+              <div className="bg-gray-50 rounded-2xl py-3 text-center">
+                <p className="text-gray-400 text-sm">
+                  Tự động chuyển trang sau{" "}
+                  <span className="font-black text-emerald-500 text-base">{countdown}s</span>
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Link
-                  to="/history"
-                  className="flex items-center justify-center gap-2 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition font-semibold text-sm"
-                >
-                  <MdHistory /> Lịch sử đặt xe
-                </Link>
-                <Link
-                  to="/"
-                  className="flex items-center justify-center gap-2 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition font-semibold text-sm"
-                >
-                  <MdHome /> Trang chủ
-                </Link>
-              </div>
+              <Link
+                to={redirectPath}
+                className="flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:-translate-y-px active:translate-y-0"
+              >
+                {redirectLabel}
+                <MdArrowForward />
+              </Link>
+
+              <Link
+                to="/"
+                className="flex items-center justify-center gap-1.5 w-full py-2 text-gray-400 hover:text-gray-600 text-sm transition-colors"
+              >
+                <MdHome /> Về trang chủ
+              </Link>
             </div>
           </div>
-        ) : (
-          /* ===== FAILURE ===== */
-          <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
-            {/* Header */}
-            <div className="bg-linear-to-r from-red-500 to-rose-500 px-8 py-10 text-center text-white">
-              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MdCancel className="text-5xl text-white" />
+        </div>
+
+      ) : (
+        /* ══════════════ FAILURE ══════════════ */
+        <div className="w-full max-w-sm">
+          {/* Icon + heading */}
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="mb-5">
+              <div className="w-24 h-24 rounded-full bg-red-100 flex items-center justify-center mx-auto">
+                <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center shadow-xl shadow-red-500/40">
+                  <MdCancel className="text-4xl text-white" />
+                </div>
               </div>
-              <h1 className="text-2xl font-black mb-1">Thanh toán thất bại</h1>
-              <p className="text-red-100 text-sm">
-                {RESPONSE_CODES[responseCode] || `Mã lỗi: ${responseCode}`}
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">Thanh toán thất bại</h1>
+            <p className="text-gray-400 text-sm mt-1.5 max-w-[260px] leading-relaxed">
+              {RESPONSE_CODES[responseCode] || `Mã lỗi: ${responseCode}`}
+            </p>
+          </div>
+
+          {/* Card */}
+          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+            <div className="px-6 pt-5 pb-3">
+              {bookingId && (
+                <Row icon={MdCalendarToday} label="Mã đặt xe" value={bookingId.slice(-8).toUpperCase()} />
+              )}
+              <p className="text-red-400 text-xs leading-relaxed py-3">
+                Đơn đặt xe vẫn được lưu lại. Bạn có thể thử thanh toán lại từ mục lịch sử đặt xe.
               </p>
             </div>
 
-            {/* Details */}
-            <div className="p-8 space-y-4">
-              {bookingId && (
-                <div className="bg-red-50 border border-red-100 rounded-2xl p-5">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500 text-sm">Mã đặt xe</span>
-                    <span className="font-mono font-semibold text-gray-800 text-sm">
-                      {bookingId.slice(-8).toUpperCase()}
-                    </span>
-                  </div>
-                  <p className="text-red-600 text-xs mt-3">
-                    Đơn đặt xe vẫn được lưu. Bạn có thể thử thanh toán lại từ mục lịch sử đặt xe.
-                  </p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 gap-3">
-                <Link
-                  to="/history"
-                  className="flex items-center justify-center gap-2 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl transition font-semibold text-sm"
-                >
-                  <MdHistory /> Xem lịch sử đặt xe
-                </Link>
-                <Link
-                  to="/vehicles"
-                  className="flex items-center justify-center gap-2 py-3 bg-sky-500 hover:bg-sky-600 text-white rounded-xl transition font-semibold text-sm"
-                >
-                  <MdDirectionsCar /> Đặt xe lại
-                </Link>
-                <Link
-                  to="/"
-                  className="flex items-center justify-center gap-2 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition font-semibold text-sm"
-                >
-                  <MdHome /> Trang chủ
-                </Link>
-              </div>
+            <div className="px-6 pb-6 space-y-3">
+              <Link
+                to="/history"
+                className="flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-red-500/25 hover:shadow-xl hover:-translate-y-px active:translate-y-0"
+              >
+                Xem lịch sử đặt xe <MdArrowForward />
+              </Link>
+              <Link
+                to="/"
+                className="flex items-center justify-center gap-1.5 w-full py-2 text-gray-400 hover:text-gray-600 text-sm transition-colors"
+              >
+                <MdHome /> Về trang chủ
+              </Link>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

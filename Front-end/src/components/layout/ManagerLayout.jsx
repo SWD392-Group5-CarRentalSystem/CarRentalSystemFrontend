@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Car, Calendar, Users, LogOut } from "lucide-react";
+import { LayoutDashboard, Car, Calendar, Users, UserCog, LogOut, User } from "lucide-react";
+import { MdElectricCar } from "react-icons/md";
 import { useAuthContext } from "../../context/AuthContext";
 
 export default function ManagerLayout() {
@@ -11,9 +12,11 @@ export default function ManagerLayout() {
 
   const menuItems = [
     { label: "Tổng quan", to: "/manager/dashboard", icon: LayoutDashboard },
-    { label: "Quản lý xe", to: "/manager/cars", icon: Car },
+    { label: "Quản lý xe", to: "/manager/vehicles", icon: Car },
     { label: "Đơn thuê", to: "/manager/bookings", icon: Calendar },
     { label: "Tài xế", to: "/manager/drivers", icon: Users },
+    { label: "Nhân viên", to: "/manager/staff", icon: UserCog },
+    { label: "Hồ sơ", to: "/manager/profile", icon: User },
   ];
 
   const handleLogout = () => {
@@ -26,10 +29,15 @@ export default function ManagerLayout() {
       {/* SIDEBAR */}
       <aside className="w-72 bg-linear-to-b from-gray-900 via-gray-800 to-gray-900 text-white shrink-0 shadow-2xl">
         <div className="px-6 py-6 border-b border-white/10">
-          <h1 className="text-2xl font-bold bg-linear-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            🚗 EV Rental
-          </h1>
-          <p className="text-xs text-gray-400 mt-1">Manager Dashboard</p>
+          <Link to="/manager/dashboard" className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white shadow-lg shadow-sky-400/40">
+              <MdElectricCar className="text-[22px]" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-white leading-none">EV Rental System</h1>
+              <p className="text-[10px] text-gray-400 mt-0.5">Quản lý hệ thống</p>
+            </div>
+          </Link>
         </div>
 
         <nav className="px-4 py-6 space-y-2">

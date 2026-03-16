@@ -13,4 +13,18 @@ export const paymentService = {
       depositAmount: Number(depositAmount),
     });
   },
+
+  /**
+   * Create VNPay payment URL for remaining amount (after deposit deducted)
+   * @param bookingId  Booking _id from DB
+   * @param remainingAmount  Số tiền còn lại sau khi trừ cọc (VND)
+   * @returns { paymentUrl: string }
+   */
+  createRemainingPaymentUrl: async (bookingId, remainingAmount, role = 'driver') => {
+    return await axiosInstance.post('/payment/vnpay/create-remaining-url', {
+      bookingId,
+      remainingAmount: Number(remainingAmount),
+      role,
+    });
+  },
 };
