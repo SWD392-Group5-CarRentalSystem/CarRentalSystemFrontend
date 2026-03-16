@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Markdown files (docs)
+*.md
+!README.md
+
+# Environment
+.env
+.env.local
