@@ -188,7 +188,8 @@ npm run preview
 
 | Role | Email | Mật khẩu |
 |---|---|---|
-| Manager | _(liên hệ admin)_ | — |
-| Staff | _(liên hệ admin)_ | — |
-| Driver | _(liên hệ admin)_ | — |
+| Manager | _manager@gmail.com_ | 123456 |
+| Staff | _staff1@gmail.com_ | 123456 |
+| Driver1| _driver1@gmail.com_ | 123456 |
+| Driver2| _driver2@gmail.com_ | 123456 |
 | Customer | Tự đăng ký tại `/register` | — |
